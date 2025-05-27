@@ -3,13 +3,24 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/hooks/useAuth"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "ZamonAI - AI kurslar platformasi",
-  description: "O'zbek tilidagi AI kurslari platformasi",
-    generator: 'v0.dev'
+  title: "ZamonAI - O'zbek tilidagi AI kurslari",
+  description: "Sun'iy intellekt va dasturlashni o'zbek tilida o'rganing",
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png' }
+    ]
+  }
 }
 
 export default function RootLayout({
@@ -21,7 +32,10 @@ export default function RootLayout({
     <html lang="uz" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          {children}
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

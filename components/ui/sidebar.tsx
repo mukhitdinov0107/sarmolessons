@@ -83,11 +83,47 @@ const SidebarProvider = React.forwardRef<
           _setOpen(openState)
         }
 
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        // Use localStorage instead of cookies to avoid third-party cookie warnings
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(SIDEBAR_COOKIE_NAME, openState.toString())
+          } catch (error) {
+            // Fallback to sessionStorage if localStorage is not available
+            try {
+              sessionStorage.setItem(SIDEBAR_COOKIE_NAME, openState.toString())
+            } catch (e) {
+              // If both fail, just continue without persistence
+              console.warn('Unable to persist sidebar state')
+            }
+          }
+        }
       },
       [setOpenProp, open]
     )
+
+    // Initialize sidebar state from localStorage on mount
+    React.useEffect(() => {
+      if (typeof window !== 'undefined' && !openProp) {
+        try {
+          const stored = localStorage.getItem(SIDEBAR_COOKIE_NAME)
+          if (stored !== null) {
+            const storedState = stored === 'true'
+            _setOpen(storedState)
+          }
+        } catch (error) {
+          // Try sessionStorage as fallback
+          try {
+            const stored = sessionStorage.getItem(SIDEBAR_COOKIE_NAME)
+            if (stored !== null) {
+              const storedState = stored === 'true'
+              _setOpen(storedState)
+            }
+          } catch (e) {
+            // If both fail, use default state
+          }
+        }
+      }
+    }, [openProp])
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {

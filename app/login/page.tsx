@@ -10,20 +10,40 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { signIn } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    if (!email || !password) {
+      toast.error("Iltimos, barcha maydonlarni to'ldiring")
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate authentication
-    setTimeout(() => {
+    try {
+      const result = await signIn(email, password)
+      
+      if (result.success) {
+        toast.success(result.message || "Muvaffaqiyatli kirdingiz!")
+        router.push("/dashboard")
+      } else {
+        toast.error(result.error || "Kirish muvaffaqiyatsiz")
+      }
+    } catch (error) {
+      toast.error("Noma'lum xatolik yuz berdi")
+    } finally {
       setIsLoading(false)
-      router.push("/dashboard")
-    }, 1500)
+    }
   }
 
   return (
@@ -43,7 +63,15 @@ export default function LoginPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="sizning@email.uz" required />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="sizning@email.uz" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -52,7 +80,14 @@ export default function LoginPage() {
                     Parolni unutdingizmi?
                   </Link>
                 </div>
-                <Input id="password" type="password" required />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
