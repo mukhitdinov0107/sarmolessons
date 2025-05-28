@@ -22,7 +22,6 @@ export default function DashboardPage() {
     inProgressCourses,
     recommendedCourses,
     recentAchievements,
-    weeklyActivity,
     loading,
     error,
     preferences,
@@ -191,10 +190,10 @@ export default function DashboardPage() {
             
             <Card className="p-4 flex flex-col items-center text-center">
               <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mb-2">
-                <TrendingUp className="w-5 h-5 text-orange-600" />
+                <Award className="w-5 h-5 text-orange-600" />
               </div>
-              <p className="text-2xl font-bold">{stats.currentStreak}</p>
-              <p className="text-xs text-muted-foreground">Faol kunlar</p>
+              <p className="text-2xl font-bold">{stats.totalAchievements}</p>
+              <p className="text-xs text-muted-foreground">Yutuqlar</p>
             </Card>
           </div>
         </section>

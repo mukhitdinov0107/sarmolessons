@@ -30,7 +30,8 @@ import {
   WeeklyActivity,
   ApiResponse,
   User,
-  Course
+  Course,
+  UserStats
 } from "@/lib/types";
 import { AuthService } from "./auth";
 import { CourseService } from "./courses";
@@ -509,39 +510,24 @@ export class ProgressService {
     }
   }
 
-  // Get user achievements
+  // Get user's achievements
   static async getUserAchievements(userId: string): Promise<UserAchievement[]> {
     try {
-      // Instead of using a composite query, we'll get all achievements for the user
-      // and filter/sort in memory to avoid index requirements
       const achievementsRef = collection(db, 'userAchievements');
       const q = query(
         achievementsRef,
-        where('userId', '==', userId)
+        where('userId', '==', userId),
+        orderBy('unlockedAt', 'desc'),
+        limit(10)
       );
       
       const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        return [];
-      }
-
-      const achievements = snapshot.docs.map(doc => ({
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      } as UserAchievement));
-
-      // Sort by unlockedAt in memory instead of using orderBy
-      achievements.sort((a: UserAchievement, b: UserAchievement) => {
-        const aTime = a.unlockedAt?.toMillis() || 0;
-        const bTime = b.unlockedAt?.toMillis() || 0;
-        return bTime - aTime; // Descending order
-      });
-
-      return achievements;
+      })) as UserAchievement[];
     } catch (error) {
       console.error('Error getting user achievements:', error);
-      // Return empty array instead of throwing to prevent dashboard from breaking
       return [];
     }
   }
@@ -680,6 +666,107 @@ export class ProgressService {
       await batch.commit();
     } catch (error) {
       console.error('Error marking achievements as read:', error);
+    }
+  }
+
+  // Get user's stats
+  static async getUserStats(userId: string): Promise<UserStats> {
+    try {
+      const statsRef = doc(db, 'users', userId);
+      const statsDoc = await getDoc(statsRef);
+      
+      if (!statsDoc.exists()) {
+        // Initialize stats if they don't exist
+        const initialStats: UserStats = {
+          totalLearningTime: 0,
+          completedLessons: 0,
+          totalAchievements: 0,
+          lastUpdated: serverTimestamp()
+        };
+        await setDoc(statsRef, { stats: initialStats }, { merge: true });
+        return initialStats;
+      }
+      
+      return statsDoc.data()?.stats || {};
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      return {};
+    }
+  }
+
+  // Update lesson progress and stats
+  static async updateLessonProgress(
+    userId: string,
+    courseId: string,
+    lessonId: string,
+    timeSpentMinutes: number,
+    completed: boolean = false
+  ): Promise<void> {
+    try {
+      const batch = db.batch();
+      
+      // Update lesson progress
+      const progressRef = doc(db, 'lessonProgress', `${userId}_${courseId}_${lessonId}`);
+      batch.set(progressRef, {
+        userId,
+        courseId,
+        lessonId,
+        timeSpentMinutes,
+        completed,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+
+      // Update user stats
+      const userRef = doc(db, 'users', userId);
+      if (completed) {
+        batch.update(userRef, {
+          'stats.completedLessons': increment(1),
+          'stats.totalLearningTime': increment(timeSpentMinutes),
+          'stats.lastUpdated': serverTimestamp()
+        });
+      } else {
+        batch.update(userRef, {
+          'stats.totalLearningTime': increment(timeSpentMinutes),
+          'stats.lastUpdated': serverTimestamp()
+        });
+      }
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Error updating lesson progress:', error);
+      throw error;
+    }
+  }
+
+  // Award achievement and update stats
+  static async awardAchievement(
+    userId: string,
+    achievementId: string,
+    achievementData: Partial<UserAchievement>
+  ): Promise<void> {
+    try {
+      const batch = db.batch();
+
+      // Add achievement
+      const achievementRef = doc(db, 'userAchievements', `${userId}_${achievementId}`);
+      batch.set(achievementRef, {
+        ...achievementData,
+        userId,
+        achievementId,
+        unlockedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Update user stats
+      const userRef = doc(db, 'users', userId);
+      batch.update(userRef, {
+        'stats.totalAchievements': increment(1),
+        'stats.lastUpdated': serverTimestamp()
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Error awarding achievement:', error);
+      throw error;
     }
   }
 }
