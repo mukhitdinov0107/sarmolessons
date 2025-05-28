@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MobileNavigation } from "@/components/mobile-navigation"
-import { BookOpen, Clock, Trophy, TrendingUp, Award, RefreshCw, AlertCircle } from "lucide-react"
+import { BookOpen, Clock, Trophy, TrendingUp, Award, RefreshCw, AlertCircle, LogIn } from "lucide-react"
 import { useDashboard } from "@/hooks/useDashboard"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
@@ -102,7 +102,34 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    return null // Will redirect to login
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted">
+        <div className="w-full max-w-md px-4 py-8 text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <LogIn className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">ZamonAI ga xush kelibsiz!</h1>
+            <p className="text-muted-foreground mb-6">
+              O'zbek tilidagi AI kurslarini o'rganish uchun tizimga kiring
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <Button asChild className="w-full" size="lg">
+              <Link href="/login">
+                Tizimga kirish
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link href="/register">
+                Ro'yxatdan o'tish
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
