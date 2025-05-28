@@ -1,5 +1,7 @@
 import { CourseClient } from './course-client';
 import { notFound } from 'next/navigation';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 interface CoursePageProps {
   params: {
@@ -7,46 +9,26 @@ interface CoursePageProps {
   };
 }
 
-interface ApiResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
-
-async function getCourseData(courseId: string): Promise<ApiResponse> {
+async function getCourseData(courseId: string) {
   try {
-    // In Next.js, we can use relative URLs for API routes
-    const apiUrl = `/api/courses/${courseId}`;
+    // Read courses data directly from JSON file
+    const filePath = path.join(process.cwd(), 'data', 'courses.json');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const data = JSON.parse(fileContent);
     
-    console.log('Fetching course data from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('API Error Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData
-      });
-      
+    const courses = data.courses || [];
+    const course = courses.find((c: any) => c.id === courseId);
+
+    if (!course) {
       return {
         success: false,
-        error: errorData.error || 'Failed to fetch course data'
+        error: 'Course not found'
       };
     }
-    
-    const data = await response.json();
-    console.log('API Response:', data);
-    
+
     return {
       success: true,
-      data: data.data
+      data: course
     };
   } catch (error) {
     console.error('Error in getCourseData:', error);
@@ -67,12 +49,12 @@ export default async function CoursePage({ params }: CoursePageProps) {
   }
   
   try {
-    // Fetch course data on the server
+    // Fetch course data directly from JSON
     const response = await getCourseData(courseId);
     
     // Check if the response indicates success and contains data
     if (!response?.success || !response.data) {
-      console.error('Invalid API response:', response);
+      console.error('Course not found:', courseId);
       notFound();
     }
     
@@ -80,7 +62,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
     
     // Ensure we have the required course data
     if (!course) {
-      console.error('Course data is missing in response');
+      console.error('Course data is missing');
       notFound();
     }
     
@@ -96,7 +78,17 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
 // This helps Next.js know which paths to pre-render
 export async function generateStaticParams() {
-  // You can pre-render some popular courses at build time
-  // For now, return an empty array and let the rest be rendered on-demand
-  return [];
+  try {
+    // Read courses data from JSON file
+    const filePath = path.join(process.cwd(), 'data', 'courses.json');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const data = JSON.parse(fileContent);
+    
+    return (data.courses || []).map((course: any) => ({
+      id: course.id,
+    }));
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    return [];
+  }
 }
