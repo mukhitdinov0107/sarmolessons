@@ -399,117 +399,6 @@ export class ProgressService {
     }
   }
 
-  // Get weekly activity for user
-  static async getWeeklyActivity(userId: string): Promise<WeeklyActivity[]> {
-    try {
-      // Get the start of the current week
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-      weekStart.setHours(0, 0, 0, 0);
-      
-      // Instead of using a composite query, get all activities for the user
-      // and filter in memory
-      const activityRef = collection(db, 'weeklyActivity');
-      const q = query(
-        activityRef,
-        where('userId', '==', userId)
-      );
-      
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        return [];
-      }
-
-      const activities = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as WeeklyActivity))
-        .filter((activity: WeeklyActivity) => {
-          // Filter for current week in memory
-          const activityWeekStart = activity.weekStart?.toDate() || new Date(0);
-          return activityWeekStart >= weekStart;
-        });
-
-      // Sort by date in memory
-      activities.sort((a: WeeklyActivity, b: WeeklyActivity) => {
-        const aDate = a.date?.toMillis() || 0;
-        const bDate = b.date?.toMillis() || 0;
-        return aDate - bDate; // Ascending order
-      });
-
-      return activities;
-    } catch (error) {
-      console.error('Error getting weekly activity:', error);
-      // Return empty array instead of throwing
-      return [];
-    }
-  }
-
-  // Update weekly activity
-  static async updateWeeklyActivity(
-    userId: string,
-    date: Date,
-    minutesSpent: number,
-    courseId: string
-  ): Promise<void> {
-    try {
-      const weekStart = this.getWeekStart(date);
-      const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-      const weekStartTimestamp = Timestamp.fromDate(weekStart);
-      
-      // Try to get existing weekly activity
-      let existingActivity = await this.getWeeklyActivity(userId);
-      
-      if (existingActivity.length > 0) {
-        // Update existing activity
-        const activity = existingActivity[0];
-        const newDailyMinutes = [...activity.dailyMinutes];
-        newDailyMinutes[dayOfWeek] += minutesSpent;
-        
-        const newCoursesAccessed = new Set([...activity.courses, courseId]);
-
-        const updateData = {
-          dailyMinutes: newDailyMinutes,
-          totalMinutes: increment(minutesSpent),
-          courses: Array.from(newCoursesAccessed)
-        };
-
-        const activityQuery = query(
-          collection(db, 'weeklyActivity'),
-          where('userId', '==', userId),
-          where('weekStart', '==', weekStartTimestamp),
-          limit(1)
-        );
-
-        const snapshot = await getDocs(activityQuery);
-        if (!snapshot.empty) {
-          await updateDoc(snapshot.docs[0].ref, updateData);
-        }
-      } else {
-        // Create new weekly activity
-        const dailyMinutes = [0, 0, 0, 0, 0, 0, 0];
-        dailyMinutes[dayOfWeek] = minutesSpent;
-
-        const newActivity: Omit<WeeklyActivity, 'id'> = {
-          userId,
-          weekStart: weekStartTimestamp,
-          dailyMinutes,
-          totalMinutes: minutesSpent,
-          lessonsCompleted: 0,
-          courses: [courseId]
-        };
-
-        await addDoc(collection(db, 'weeklyActivity'), newActivity);
-      }
-    } catch (error) {
-      console.error('Error updating weekly activity:', error);
-    }
-  }
-
   // Get user's achievements
   static async getUserAchievements(userId: string): Promise<UserAchievement[]> {
     try {
@@ -639,14 +528,6 @@ export class ProgressService {
     return 'unknown';
   }
 
-  // Helper function
-  static getWeekStart(date: Date): Date {
-    const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
-    weekStart.setHours(0, 0, 0, 0);
-    return weekStart;
-  }
-
   // Mark achievement notifications as read
   static async markAchievementsAsRead(userId: string): Promise<void> {
     try {
@@ -680,7 +561,6 @@ export class ProgressService {
         const initialStats: UserStats = {
           totalLearningTime: 0,
           completedLessons: 0,
-          totalAchievements: 0,
           lastUpdated: serverTimestamp()
         };
         await setDoc(statsRef, { stats: initialStats }, { merge: true });
@@ -734,38 +614,6 @@ export class ProgressService {
       await batch.commit();
     } catch (error) {
       console.error('Error updating lesson progress:', error);
-      throw error;
-    }
-  }
-
-  // Award achievement and update stats
-  static async awardAchievement(
-    userId: string,
-    achievementId: string,
-    achievementData: Partial<UserAchievement>
-  ): Promise<void> {
-    try {
-      const batch = db.batch();
-
-      // Add achievement
-      const achievementRef = doc(db, 'userAchievements', `${userId}_${achievementId}`);
-      batch.set(achievementRef, {
-        ...achievementData,
-        userId,
-        achievementId,
-        unlockedAt: serverTimestamp()
-      }, { merge: true });
-
-      // Update user stats
-      const userRef = doc(db, 'users', userId);
-      batch.update(userRef, {
-        'stats.totalAchievements': increment(1),
-        'stats.lastUpdated': serverTimestamp()
-      });
-
-      await batch.commit();
-    } catch (error) {
-      console.error('Error awarding achievement:', error);
       throw error;
     }
   }

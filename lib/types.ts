@@ -3,7 +3,6 @@ import { Timestamp } from "firebase/firestore";
 export interface UserStats {
   totalLearningTime: number;
   completedLessons: number;
-  totalAchievements: number;
   lastUpdated?: Timestamp;
 }
 

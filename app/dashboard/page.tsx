@@ -21,7 +21,6 @@ export default function DashboardPage() {
     stats,
     inProgressCourses,
     recommendedCourses,
-    recentAchievements,
     loading,
     error,
     preferences,
@@ -187,14 +186,6 @@ export default function DashboardPage() {
               <p className="text-2xl font-bold">{stats.completedCourses}</p>
               <p className="text-xs text-muted-foreground">Tugallangan kurslar</p>
             </Card>
-            
-            <Card className="p-4 flex flex-col items-center text-center">
-              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mb-2">
-                <Award className="w-5 h-5 text-orange-600" />
-              </div>
-              <p className="text-2xl font-bold">{stats.totalAchievements}</p>
-              <p className="text-xs text-muted-foreground">Yutuqlar</p>
-            </Card>
           </div>
         </section>
 
@@ -243,26 +234,6 @@ export default function DashboardPage() {
                       </Link>
                     </Button>
                   </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Recent Achievements */}
-        {recentAchievements.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">So'nggi yutuqlar</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {recentAchievements.map((achievement, index) => (
-                <Card key={achievement.id || index} className="p-4 flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                    <Award className="w-6 h-6 text-primary" />
-                  </div>
-                  <h3 className="font-medium text-sm mb-1">Yangi yutuq!</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(achievement.unlockedAt?.seconds * 1000 || Date.now()).toLocaleDateString()}
-                  </p>
                 </Card>
               ))}
             </div>
