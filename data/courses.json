@@ -1,250 +1,176 @@
 {
   "courses": [
     {
-      "id": "ai-fundamentals-uzbek",
-      "title": "Sun'iy Intellekt asoslari",
-      "description": "AI texnologiyalari bilan tanishing va asosiy tushunchalarni o'rganing. Ushbu kurs zamonaviy AI texnologiyalari, machine learning va deep learning asoslarini o'rgatadi.",
-      "shortDescription": "AI texnologiyalari bilan tanishing",
-      "instructor": "Alisher Isaev",
-      "instructorBio": "AI sohasida 5 yillik tajribaga ega mutaxassis. Microsoft va Google'da ishlagan.",
-      "instructorImageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      "level": "Boshlang'ich",
-      "category": "AI Asoslari",
-      "duration": "6 soat",
-      "price": 0,
-      "currency": "UZS",
-      "language": "uz",
-      "imageUrl": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=300&fit=crop",
-      "videoPreviewUrl": "https://www.youtube.com/watch?v=JMUxmLyrhSk",
-      "tags": ["AI", "Machine Learning", "Boshlang'ich", "Sun'iy intellekt"],
+      "id": "ai-internship-bootcamp",
+      "title": "AI Internship Preparation Bootcamp",
+      "description": "A four-week hybrid program that equips final-year computer-science students with practical skills in modern NLP, large language models, and MLOps, culminating in a guaranteed two-month paid internship at partner companies.",
+      "shortDescription": "4-week hands-on AI bootcamp",
+      "instructor": "Dr Sara Thompson",
+      "instructorBio": "PhD in Machine Learning, 8 years industry R&D (Google, DeepMind), author of two papers on efficient LLM fine-tuning.",
+      "instructorImageUrl": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=150&h=150&fit=crop&crop=face",
+      "level": "Intermediate",
+      "category": "Artificial Intelligence",
+      "duration": "4 weeks",
+      "price": 100,
+      "currency": "USD",
+      "language": "en",
+      "imageUrl": "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=400&h=300&fit=crop",
+      "videoPreviewUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "tags": ["AI", "LLM", "NLP", "Internship Prep"],
       "isPublished": true,
       "isFeatured": true,
       "enrollmentCount": 0,
-      "rating": 4.8,
-      "reviewCount": 124,
+      "rating": 0,
+      "reviewCount": 0,
       "certificateAvailable": true,
-      "estimatedHours": 6,
-      "prerequisites": [],
+      "estimatedHours": 25,
+      "prerequisites": ["Python Basics", "Linear Algebra Fundamentals"],
       "learningOutcomes": [
-        "AI asosiy tushunchalarini tushunish",
-        "Machine Learning algoritmlarini bilish",
-        "Deep Learning asoslarini o'zlashtirish",
-        "Amaliy AI loyihalarini yaratish"
+        "Implement and fine-tune transformer models",
+        "Build retrieval-augmented generation (RAG) pipelines",
+        "Apply prompt-engineering patterns for business tasks",
+        "Containerise and deploy an LLM micro-service",
+        "Collaborate with Git, CI/CD, and code reviews"
       ],
       "lessons": [
         {
-          "id": "lesson-1-what-is-ai",
-          "title": "Sun'iy intellekt nima?",
-          "description": "AI asoslari va uning qo'llanilish sohalari haqida umumiy ma'lumot",
-          "duration": "30 daqiqa",
+          "id": "week-1-foundations",
+          "title": "Modern ML Foundations",
+          "description": "Python & NumPy refresher, automatic differentiation, and the anatomy of a transformer block.",
+          "duration": "6 hours",
           "order": 1,
           "isPublished": true,
           "isFree": true,
-          "videoUrl": "https://www.youtube.com/watch?v=JMUxmLyrhSk",
-          "content": "<h2>Sun'iy intellekt nima?</h2><p>Sun'iy intellekt (AI) - bu kompyuter tizimlari tomonidan insoniy intellektni taqlid qilish jarayoni. Bu texnologiya insonlar kabi o'rganish, fikrlash va qaror qabul qilish qobiliyatiga ega.</p><h3>AI ning asosiy xususiyatlari:</h3><ul><li><strong>O'rganish qobiliyati</strong> - ma'lumotlardan naqsh va qonuniyatlarni topish</li><li><strong>Xulosa chiqarish</strong> - mavjud ma'lumotlar asosida yangi bilimlar hosil qilish</li><li><strong>Adaptatsiya</strong> - yangi vaziyatlarga moslashish qobiliyati</li><li><strong>Muammolarni yechish</strong> - murakkab masalalar uchun yechim topish</li></ul><p>Bugungi kunda AI turli sohalarda qo'llanilmoqda: tibbiyot, transport, moliya, ta'lim va boshqa ko'plab sohalar.</p>",
+          "videoUrl": "https://www.youtube.com/watch?v=O5xeyoRL95U",
+          "content": "<h2>Week 1 – Foundations</h2><p>This module reviews essential math and coding skills, introduces GPU tooling, and walks through every sub-layer in a transformer encoder.</p>",
           "attachments": [
             {
-              "id": "attachment-1",
-              "name": "AI asoslari - Prezentatsiya",
+              "id": "wk1-slides",
+              "name": "Week 1 Slides",
               "type": "pdf",
-              "url": "/attachments/ai-fundamentals-lesson1.pdf",
-              "size": "2.5 MB",
-              "description": "Dars uchun asosiy prezentatsiya materiallari"
-            },
-            {
-              "id": "attachment-2", 
-              "name": "AI tarixi - Infografika",
-              "type": "image",
-              "url": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&h=600&fit=crop",
-              "size": "1.2 MB",
-              "description": "AI rivojlanish tarixi infografikasi"
+              "url": "/attachments/w1-foundations.pdf",
+              "size": "3 MB",
+              "description": "Deck covering key concepts and formulas."
             }
           ],
           "links": [
             {
-              "id": "link-1",
-              "title": "Stanford AI kursi",
-              "url": "https://cs229.stanford.edu/",
-              "description": "Stanford universitetining mashhur machine learning kursi",
-              "type": "external"
-            },
-            {
-              "id": "link-2",
-              "title": "OpenAI rasmiy sayti",
-              "url": "https://openai.com/",
-              "description": "OpenAI kompaniyasining rasmiy sayti",
+              "id": "link-wk1-hf",
+              "title": "Hugging Face Docs",
+              "url": "https://huggingface.co/docs",
+              "description": "Official transformer library documentation",
               "type": "external"
             }
           ],
           "quiz": {
-            "id": "quiz-1",
-            "title": "AI asoslari bo'yicha test",
+            "id": "quiz-wk1",
+            "title": "Foundations Quiz",
             "questions": [
               {
                 "id": "q1",
-                "question": "AI ning to'liq nomi nima?",
-                "options": [
-                  "Artificial Intelligence",
-                  "Advanced Intelligence", 
-                  "Automated Intelligence",
-                  "Applied Intelligence"
-                ],
-                "correctAnswer": 0,
-                "explanation": "AI - Artificial Intelligence ya'ni Sun'iy intellekt demakdir."
+                "question": "Which operation enables backpropagation in PyTorch?",
+                "options": ["torch.no_grad()", "torch.autograd", "torch.jit", "torch.compile"],
+                "correctAnswer": 1,
+                "explanation": "torch.autograd tracks operations and computes gradients automatically."
               }
             ]
           }
         },
         {
-          "id": "lesson-2-machine-learning",
-          "title": "Machine Learning asoslari",
-          "description": "ML algoritmlari va ularning ishlash printsiplari",
-          "duration": "45 daqiqa",
+          "id": "week-2-nlp-finetuning",
+          "title": "NLP Essentials & Fine-Tuning",
+          "description": "Data preprocessing, embeddings, and fine-tuning DistilBERT on a sentiment dataset.",
+          "duration": "6 hours",
           "order": 2,
           "isPublished": true,
           "isFree": false,
-          "videoUrl": "https://www.youtube.com/watch?v=ukzFI9rgwfU",
-          "content": "<h2>Machine Learning nima?</h2><p>Machine Learning (ML) - bu kompyuterlarga aniq dasturlashsiz o'rganish imkonini beruvchi AI ning bir qismi. ML algoritmlari ma'lumotlardagi naqshlarni o'zi topib, ulardan foydalanib bashorat qilish yoki qaror qabul qilish qobiliyatiga ega.</p><h3>ML ning asosiy turlari:</h3><ul><li><strong>Supervised Learning</strong> - yorliqli ma'lumotlar bilan o'rgatish</li><li><strong>Unsupervised Learning</strong> - yorliqsiz ma'lumotlardan naqsh topish</li><li><strong>Reinforcement Learning</strong> - mukofot va jazo orqali o'rgatish</li></ul><h3>Mashhur ML algoritmlari:</h3><ul><li>Linear Regression</li><li>Decision Trees</li><li>Random Forest</li><li>Neural Networks</li><li>Support Vector Machines (SVM)</li></ul><p>Har bir algoritm o'ziga xos masalalar uchun mos keladi va turli xil ma'lumotlar bilan ishlaydi.</p>",
-          "attachments": [
-            {
-              "id": "attachment-3",
-              "name": "ML algoritmlari jadval",
-              "type": "excel",
-              "url": "/attachments/ml-algorithms-table.xlsx",
-              "size": "1.8 MB",
-              "description": "Turli ML algoritmlarining taqqoslash jadvali"
-            },
-            {
-              "id": "attachment-4",
-              "name": "Python kod namunalari",
-              "type": "code",
-              "url": "/attachments/ml-python-examples.zip",
-              "size": "3.2 MB",
-              "description": "Amaliy ML kod namunalari Python dasturlash tilida"
-            }
-          ],
-          "links": [
-            {
-              "id": "link-3",
-              "title": "Scikit-learn kutubxonasi",
-              "url": "https://scikit-learn.org/",
-              "description": "Python uchun mashhur ML kutubxonasi",
-              "type": "external"
-            },
-            {
-              "id": "link-4",
-              "title": "Kaggle Learn - ML kursi",
-              "url": "https://www.kaggle.com/learn/intro-to-machine-learning",
-              "description": "Kaggle platformasidagi bepul ML kursi",
-              "type": "external"
-            }
-          ],
+          "videoUrl": "https://www.youtube.com/watch?v=8u0NTzT05xk",
+          "content": "<h2>Week 2 – NLP & Fine-Tuning</h2><p>Hands-on walkthrough of tokenisation pipelines and Hugging Face Trainer for multi-lingual sentiment analysis.</p>",
+          "attachments": [],
+          "links": [],
           "quiz": {
-            "id": "quiz-2",
-            "title": "Machine Learning test",
+            "id": "quiz-wk2",
+            "title": "NLP Quiz",
             "questions": [
               {
                 "id": "q2",
-                "question": "Supervised Learning nima?",
+                "question": "What is the main benefit of using pretrained embeddings?",
                 "options": [
-                  "Ma'lumotlarda yorliqlar bor",
-                  "Ma'lumotlarda yorliqlar yo'q",
-                  "Faqat matn bilan ishlash",
-                  "Faqat rasmlar bilan ishlash"
+                  "They reduce GPU memory usage",
+                  "They provide contextual meaning from large corpora",
+                  "They eliminate the need for tokenisation",
+                  "They guarantee higher inference speed"
                 ],
-                "correctAnswer": 0,
-                "explanation": "Supervised Learning - bu yorliqli ma'lumotlar bilan o'rgatish usuli."
+                "correctAnswer": 1,
+                "explanation": "Pretrained embeddings encode semantic information learned from vast text data."
               }
             ]
           }
-        }
-      ],
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    },
-    {
-      "id": "nlp-uzbek-course",
-      "title": "Natural Language Processing",
-      "description": "Tabiiy tilni qayta ishlash texnologiyalari va ularning amaliy qo'llanilishi",
-      "shortDescription": "NLP texnologiyalari bilan ishlash",
-      "instructor": "Madina Karimova",
-      "instructorBio": "NLP sohasida 3 yillik tajribaga ega, Tashkent IT Parkda ishlovchi mutaxassis",
-      "instructorImageUrl": "https://images.unsplash.com/photo-1494790108755-2616b612b494?w=150&h=150&fit=crop&crop=face",
-      "level": "O'rta",
-      "category": "NLP",
-      "duration": "8 soat",
-      "price": 50000,
-      "currency": "UZS",
-      "language": "uz",
-      "imageUrl": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=300&fit=crop",
-      "videoPreviewUrl": "https://www.youtube.com/watch?v=fOvTtapxa9c",
-      "tags": ["NLP", "Text Processing", "O'rta", "Tabiiy til"],
-      "isPublished": true,
-      "isFeatured": false,
-      "enrollmentCount": 0,
-      "rating": 4.6,
-      "reviewCount": 89,
-      "certificateAvailable": true,
-      "estimatedHours": 8,
-      "prerequisites": ["Python asoslari", "Machine Learning asoslari"],
-      "learningOutcomes": [
-        "Matnlarni qayta ishlash usullari",
-        "Sentiment Analysis",
-        "Named Entity Recognition",
-        "Chatbot yaratish"
-      ],
-      "lessons": [
+        },
         {
-          "id": "lesson-nlp-1-intro",
-          "title": "NLP ga kirish",
-          "description": "Natural Language Processing asoslari",
-          "duration": "40 daqiqa",
-          "order": 1,
+          "id": "week-3-generative-ai",
+          "title": "Generative AI for Business",
+          "description": "Prompt engineering patterns, RAG pipeline construction, and safety guardrails.",
+          "duration": "6 hours",
+          "order": 3,
           "isPublished": true,
-          "isFree": true,
-          "videoUrl": "https://www.youtube.com/watch?v=fOvTtapxa9c",
-          "content": "<h2>NLP nima?</h2><p>Natural Language Processing (NLP) - bu kompyuterlar va inson tilini bog'laydigan texnologiya. NLP yordamida kompyuterlar matnlarni tushunish, tahlil qilish va qayta ishlash qobiliyatiga ega bo'ladi.</p><h3>NLP ning asosiy vazifalar:</h3><ul><li><strong>Sentiment Analysis</strong> - matnning his-tuyg'ularini aniqlash</li><li><strong>Named Entity Recognition</strong> - matndagi ob'ektlarni (shaxs, joy, tashkilot) tanish</li><li><strong>Machine Translation</strong> - avtomatik tarjima</li><li><strong>Text Summarization</strong> - matnni qisqartirish</li><li><strong>Question Answering</strong> - savollarga javob berish</li></ul><h3>NLP texnologiyalari:</h3><ul><li>Tokenization - matnni so'zlarga bo'lish</li><li>POS Tagging - so'z turkumlarini aniqlash</li><li>Parsing - grammatik tahlil</li><li>Word Embeddings - so'zlarni raqamli ko'rinishga o'tkazish</li></ul><p>Zamonaviy NLP modellari GPT, BERT kabi chuqur o'rganish arxitekturalariga asoslangan.</p>",
-          "attachments": [
-            {
-              "id": "attachment-nlp-1",
-              "name": "NLP dasturlari ro'yxati",
-              "type": "pdf",
-              "url": "/attachments/nlp-applications.pdf",
-              "size": "1.9 MB",
-              "description": "NLP ning turli sohalardagi qo'llanilishi"
-            }
-          ],
-          "links": [
-            {
-              "id": "link-nlp-1",
-              "title": "NLTK kutubxonasi",
-              "url": "https://www.nltk.org/",
-              "description": "Python uchun NLP kutubxonasi",
-              "type": "external"
-            }
-          ],
+          "isFree": false,
+          "videoUrl": "https://www.youtube.com/watch?v=zXxV6rZ0_jg",
+          "content": "<h2>Week 3 – Generative AI</h2><p>Students build a retrieval-augmented FAQ chatbot and implement basic red-teaming tests.</p>",
+          "attachments": [],
+          "links": [],
           "quiz": {
-            "id": "quiz-nlp-1",
-            "title": "NLP asoslari test",
+            "id": "quiz-wk3",
+            "title": "Generative AI Quiz",
             "questions": [
               {
-                "id": "qnlp1",
-                "question": "NLP ning asosiy vazifasi nima?",
-                "options": [
-                  "Matnni tushunish va qayta ishlash",
-                  "Faqat tarjima qilish",
-                  "Faqat ovozni tanish",
-                  "Faqat yozishni o'rgatish"
-                ],
+                "id": "q3",
+                "question": "Which component injects external knowledge into an LLM in a RAG system?",
+                "options": ["Vector store", "Prompt template", "Decoder block", "Optimizer"],
                 "correctAnswer": 0,
-                "explanation": "NLP ning asosiy maqsadi - inson tilini kompyuter tushuna oladigan formatga aylantirish."
+                "explanation": "The vector store retrieves relevant chunks that are merged with the prompt."
+              }
+            ]
+          }
+        },
+        {
+          "id": "week-4-capstone",
+          "title": "Capstone & MLOps Lite",
+          "description": "FastAPI + LangChain deployment, Docker packaging, monitoring, and interview preparation.",
+          "duration": "7 hours",
+          "order": 4,
+          "isPublished": true,
+          "isFree": false,
+          "videoUrl": "https://www.youtube.com/watch?v=YQ0-IvTDc_8",
+          "content": "<h2>Week 4 – Capstone</h2><p>Teams ship a micro-service that summarises long documents and expose it via REST. Session concludes with demo day and mock technical interviews.</p>",
+          "attachments": [
+            {
+              "id": "wk4-template",
+              "name": "FastAPI Template Repo",
+              "type": "code",
+              "url": "/attachments/fastapi-template.zip",
+              "size": "0.8 MB",
+              "description": "Starter code for the deployment task."
+            }
+          ],
+          "links": [],
+          "quiz": {
+            "id": "quiz-wk4",
+            "title": "MLOps Quiz",
+            "questions": [
+              {
+                "id": "q4",
+                "question": "Which file defines Docker build instructions?",
+                "options": ["requirements.txt", "Dockerfile", "compose.yaml", "Makefile"],
+                "correctAnswer": 1,
+                "explanation": "A Dockerfile contains directives to build an image."
               }
             ]
           }
         }
       ],
-      "createdAt": "2024-01-15T00:00:00.000Z",
-      "updatedAt": "2024-01-15T00:00:00.000Z"
+      "createdAt": "2025-05-28T00:00:00.000Z",
+      "updatedAt": "2025-05-28T00:00:00.000Z"
     }
   ]
 }
