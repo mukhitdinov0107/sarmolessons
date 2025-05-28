@@ -49,7 +49,7 @@ export default function ProgressPage() {
         }
       }
     });
-    const lastActivityString = mostRecentActivityDate ? format(mostRecentActivityDate, 'dd.MM.yyyy') : 'Hali yo'q';
+    const lastActivityString = mostRecentActivityDate ? format(mostRecentActivityDate, 'dd.MM.yyyy') : 'Hali yo\'q';
 
     setStats([
       { label: "Tugallangan darslar", value: totalLessons, icon: BookOpen },
