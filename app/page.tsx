@@ -39,7 +39,7 @@ export default function Home() {
           <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary mb-4">
             <BrainCircuit className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">ZamonAI</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">SarmoTraining</h1>
           <p className="text-muted-foreground mb-6">O&apos;zbek tilidagi AI kurslari platformasi</p>
           <div className="flex gap-4">
             {user ? (
@@ -113,7 +113,7 @@ export default function Home() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Nima uchun ZamonAI?</h2>
+          <h2 className="text-2xl font-semibold mb-4">Nima uchun SarmoTraining?</h2>
           <div className="grid grid-cols-1 gap-4">
             {features.map((feature, index) => (
               <div key={index} className="flex gap-4 p-4 border rounded-lg">

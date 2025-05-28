@@ -88,7 +88,7 @@ export default function RegisterPage() {
         <Card>
           <CardHeader>
             <CardTitle>Ro&apos;yxatdan o&apos;tish</CardTitle>
-            <CardDescription>ZamonAI platformasiga qo&apos;shilish uchun ma&apos;lumotlaringizni kiriting</CardDescription>
+            <CardDescription>SarmoTraining platformasiga qo&apos;shilish uchun ma&apos;lumotlaringizni kiriting</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">

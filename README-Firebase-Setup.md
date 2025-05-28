@@ -1,4 +1,4 @@
-# 🔥 ZamonAI Firebase Backend Setup Guide
+# 🔥 SarmoTraining Firebase Backend Setup Guide
 
 ## 🚀 **Complete Firebase Backend Implementation**
 
@@ -241,7 +241,7 @@ For any issues with the Firebase setup:
 
 ## 🎉 **You're Ready!**
 
-Your ZamonAI app now has a **complete, production-ready Firebase backend**! 
+Your SarmoTraining app now has a **complete, production-ready Firebase backend**! 
 
 Run `npm run dev` and start exploring the features:
 - Register a new account

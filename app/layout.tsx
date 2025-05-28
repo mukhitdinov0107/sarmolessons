@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/sonner"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "ZamonAI - O'zbek tilidagi AI kurslari",
+  title: "SarmoTraining - O'zbek tilidagi AI kurslari",
   description: "Sun'iy intellekt va dasturlashni o'zbek tilida o'rganing",
   icons: {
     icon: [

@@ -109,7 +109,7 @@ export default function DashboardPage() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <LogIn className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">ZamonAI ga xush kelibsiz!</h1>
+            <h1 className="text-2xl font-bold mb-2">SarmoTraining ga xush kelibsiz!</h1>
             <p className="text-muted-foreground mb-6">
               O'zbek tilidagi AI kurslarini o'rganish uchun tizimga kiring
             </p>

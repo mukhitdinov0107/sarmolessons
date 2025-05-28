@@ -57,7 +57,7 @@ export default function LoginPage() {
         <Card>
           <CardHeader>
             <CardTitle>Tizimga kirish</CardTitle>
-            <CardDescription>ZamonAI platformasiga kirish uchun ma&apos;lumotlaringizni kiriting</CardDescription>
+            <CardDescription>SarmoTraining platformasiga kirish uchun ma&apos;lumotlaringizni kiriting</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">

@@ -157,7 +157,7 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                     <User className="h-4 w-4 mr-1.5" />
-                    {course.instructor || 'ZamonAI'}
+                    {course.instructor || 'SarmoTraining'}
                   </div>
                 </div>
 
@@ -217,7 +217,7 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="text-muted-foreground">O'qituvchi:</span>
-                      <span className="font-medium">{course.instructor || 'ZamonAI'}</span>
+                      <span className="font-medium">{course.instructor || 'SarmoTraining'}</span>
                     </div>
                   </div>
                 </div>
