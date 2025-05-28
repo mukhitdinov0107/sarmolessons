@@ -36,7 +36,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy public and data directories
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/data ./data
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
@@ -53,5 +55,6 @@ EXPOSE 8080
 
 ENV PORT 8080
 ENV HOSTNAME "0.0.0.0"
+ENV NEXT_PUBLIC_APP_URL="https://sarmolessons-production.up.railway.app"
 
 CMD ["node", "server.js"] 

@@ -15,12 +15,8 @@ interface ApiResponse {
 
 async function getCourseData(courseId: string): Promise<ApiResponse> {
   try {
-    // Construct the API URL based on the environment
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      : 'http://localhost:3000';
-      
-    const apiUrl = new URL(`/api/courses/${courseId}`, baseUrl).toString();
+    // In Next.js, we can use relative URLs for API routes
+    const apiUrl = `/api/courses/${courseId}`;
     
     console.log('Fetching course data from:', apiUrl);
     
