@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { enrollments, isEnrolled, enrollInCourse, loading: enrollmentsLoading } = useEnrollments();
+  const { enrollments, isEnrolled, enrollInCourse, loading: enrollmentsLoading, refetch } = useEnrollments();
   
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons || []);
   const [loading, setLoading] = useState(false);
@@ -33,6 +33,33 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
   const [enrolled, setEnrolled] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState(0);
+
+  // Add refresh mechanism to update progress when returning from lesson
+  const refreshProgress = useCallback(async () => {
+    if (!user || !courseId) return;
+    
+    try {
+      // Force refresh enrollments to get latest progress
+      await refetch();
+    } catch (error) {
+      console.error('Error refreshing progress:', error);
+    }
+  }, [user, courseId, refetch]);
+
+  // Listen for focus events to refresh progress when user returns to course page
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshProgress();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshProgress]);
+
+  // Also refresh when navigating back to this page
+  useEffect(() => {
+    refreshProgress();
+  }, [refreshProgress]);
 
   useEffect(() => {
     if (!courseId || !user) return;
