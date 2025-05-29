@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,7 +10,7 @@ import { CourseService } from '@/lib/services/courses';
 import { ProgressService } from '@/lib/services/progress';
 import { Course, User, Enrollment, LessonProgress } from '@/lib/types';
 
-export default function StudentsPage() {
+function StudentsContent() {
   const searchParams = useSearchParams();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>(searchParams.get('courseId') || '');
@@ -183,5 +183,25 @@ export default function StudentsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function StudentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <StudentsContent />
+    </Suspense>
   );
 } 
