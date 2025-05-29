@@ -11,20 +11,8 @@ export const metadata: Metadata = {
   title: "SarmoLessons - AI o'rganish platformasi",
   description: "O'zbekistonda AI va ML texnologiyalarini o'rganish uchun eng yaxshi platforma",
   icons: {
-    icon: [
-      {
-        url: "/favicon.ico",
-        sizes: "any"
-      }
-    ],
-    apple: [
-      {
-        url: "/apple-touch-icon.png",
-        sizes: "180x180"
-      }
-    ]
-  },
-  manifest: "/site.webmanifest"
+    icon: "/favicon.ico"
+  }
 }
 
 export default function RootLayout({
