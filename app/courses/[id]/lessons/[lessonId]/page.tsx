@@ -47,7 +47,7 @@ export default function LessonPage() {
           setLesson(data.data.lesson)
           setCourse({
             ...data.data.course,
-            lessons: data.data.allLessons
+            lessons: Array.isArray(data.data.allLessons) ? data.data.allLessons : []
           })
           
           // Start tracking progress if user is logged in
