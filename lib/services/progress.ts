@@ -579,8 +579,9 @@ export class ProgressService {
     userId: string,
     courseId: string,
     lessonId: string,
-    timeSpent: number,
-    isCompleted: boolean
+    timeSpent: number, // in seconds for this session
+    isCompleted: boolean,
+    watchPercentage?: number // Optional: current watch percentage
   ): Promise<void> {
     try {
       const enrollmentRef = collection(db, 'enrollments');
@@ -596,24 +597,94 @@ export class ProgressService {
         throw new Error('Enrollment not found');
       }
       
-      const enrollmentDoc = snapshot.docs[0];
-      const enrollment = enrollmentDoc.data() as Enrollment;
-      
-      // Update the enrollment document
-      const updateData: any = {
-        'progress.lastAccessedAt': serverTimestamp(),
-        'progress.totalTimeSpent': increment(timeSpent),
-        updatedAt: serverTimestamp(),
+      const enrollmentDocRef = snapshot.docs[0].ref;
+      const enrollment = snapshot.docs[0].data() as Enrollment;
+
+      // Ensure progress and completedLessons are initialized
+      const progress = enrollment.progress || {
+        completedLessons: [],
+        currentLessonId: lessonId,
+        progressPercentage: 0,
+        totalTimeSpent: 0,
+        lastAccessedAt: serverTimestamp() as Timestamp,
       };
       
-      if (isCompleted && !enrollment.progress.completedLessons.includes(lessonId)) {
-        updateData['progress.completedLessons'] = [...enrollment.progress.completedLessons, lessonId];
+      progress.completedLessons = progress.completedLessons || [];
+
+      let lessonProgress = progress.completedLessons.find(lp => lp.lessonId === lessonId);
+      let updatedCompletedLessons = [...progress.completedLessons];
+
+      if (lessonProgress) {
+        // Update existing lesson progress
+        lessonProgress.timeSpent = (lessonProgress.timeSpent || 0) + timeSpent;
+        if (watchPercentage !== undefined) {
+          lessonProgress.watchPercentage = Math.max(lessonProgress.watchPercentage || 0, watchPercentage);
+        }
+        if (isCompleted && !lessonProgress.completedAt) {
+          lessonProgress.completedAt = serverTimestamp() as Timestamp;
+          lessonProgress.attempts = (lessonProgress.attempts || 0) + 1;
+        }
+        // Replace the old lesson progress with the updated one
+        updatedCompletedLessons = updatedCompletedLessons.map(lp => 
+          lp.lessonId === lessonId ? lessonProgress! : lp
+        );
+      } else {
+        // Create new lesson progress
+        lessonProgress = {
+          lessonId,
+          timeSpent,
+          watchPercentage: watchPercentage || (isCompleted ? 100 : 0),
+          attempts: isCompleted ? 1 : 0,
+          completedAt: isCompleted ? (serverTimestamp() as Timestamp) : undefined,
+        };
+        updatedCompletedLessons.push(lessonProgress);
       }
       
-      await updateDoc(doc(db, 'enrollments', enrollmentDoc.id), updateData);
+      // Recalculate progress percentage
+      // Assuming CourseService.getCourseById(courseId) returns a course with total lessons count
+      const courseDetails = await CourseService.getCourseById(courseId);
+      const totalLessonsInCourse = courseDetails?.lessons?.length || 0;
       
+      const completedLessonsCount = updatedCompletedLessons.filter(lp => lp.completedAt).length;
+      const progressPercentage = totalLessonsInCourse > 0 
+        ? Math.round((completedLessonsCount / totalLessonsInCourse) * 100) 
+        : 0;
+
+      const updateData: Partial<Enrollment> & { progress: Partial<CourseProgress> } = {
+        progress: {
+          ...progress, // spread existing progress fields
+          completedLessons: updatedCompletedLessons,
+          totalTimeSpent: increment(timeSpent) as unknown as number, // Firestore increment
+          lastAccessedAt: serverTimestamp() as Timestamp,
+          currentLessonId: lessonId,
+          progressPercentage: progressPercentage,
+        },
+        lastAccessedAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
+      };
+      
+      if (progressPercentage === 100 && enrollment.status !== 'completed') {
+        updateData.status = 'completed';
+        // Optionally, update user stats for completed courses
+         await AuthService.updateUserStats(userId, {
+            completedCourses: increment(1) as unknown as number,
+         });
+      }
+
+      await updateDoc(enrollmentDocRef, updateData);
+      
+      // Update user's general stats
+      await AuthService.updateUserStats(userId, {
+        totalLearningTime: increment(timeSpent) as unknown as number,
+        lastActiveDate: serverTimestamp() as Timestamp,
+        ...(isCompleted && !progress.completedLessons.find(lp => lp.lessonId === lessonId)?.completedAt 
+            ? { completedLessons: increment(1) as unknown as number } 
+            : {})
+      });
+
     } catch (error) {
       console.error('Error updating lesson progress:', error);
+      // Consider how to handle this error - maybe rethrow or log to a monitoring service
       throw error;
     }
   }

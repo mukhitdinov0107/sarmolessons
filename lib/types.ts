@@ -47,6 +47,7 @@ export interface Course {
   learningOutcomes?: string[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  lessons?: Lesson[];
 }
 
 export interface Lesson {
@@ -63,29 +64,36 @@ export interface Lesson {
   links?: Link[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  quiz?: Quiz;
 }
 
 export interface LessonProgress {
-  userId: string;
-  courseId: string;
   lessonId: string;
-  timeSpentMinutes: number;
-  completed: boolean;
-  lastUpdated?: Timestamp;
+  completedAt: Timestamp;
+  timeSpent: number;
+  watchPercentage: number;
+  attempts: number;
+  quizScore?: number;
+  quizAttempts?: QuizAttempt[];
+}
+
+export interface CourseProgress {
+  completedLessons: LessonProgress[];
+  currentLessonId: string | null;
+  progressPercentage: number;
+  totalTimeSpent: number;
+  lastAccessedAt: Timestamp;
 }
 
 export interface Enrollment {
   id: string;
   userId: string;
   courseId: string;
-  progress: {
-    completedLessons: string[];
-    progressPercentage: number;
-    lastAccessedLessonId?: string;
-    lastUpdated?: Timestamp;
-  };
   enrolledAt: Timestamp;
-  updatedAt?: Timestamp;
+  lastAccessedAt: Timestamp;
+  status: 'active' | 'completed' | 'cancelled';
+  progress: CourseProgress;
+  updatedAt: Timestamp;
 }
 
 export interface UserAchievement {
@@ -121,4 +129,40 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  type: 'multiple-choice' | 'single-choice' | 'true-false' | 'short-answer';
+  questionText: string;
+  options?: string[];
+  correctAnswer: string | string[];
+  points: number;
+  explanation?: string;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description?: string;
+  questions: QuizQuestion[];
+  passingScore: number;
+  timeLimit?: number;
+  maxAttempts?: number;
+}
+
+export interface UserAnswer {
+  questionId: string;
+  answer: string | string[];
+  isCorrect?: boolean;
+}
+
+export interface QuizAttempt {
+  id: string;
+  attemptNumber: number;
+  answers: UserAnswer[];
+  score: number;
+  passed: boolean;
+  submittedAt: Timestamp;
+  timeTaken: number;
 } 
