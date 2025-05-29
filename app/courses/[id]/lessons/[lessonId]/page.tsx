@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
-import { MobileNavigation } from "@/components/mobile-navigation"
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Lesson, Course } from "@/lib/types"
+import { ArrowLeft, ArrowRight, CheckCircle, Download, ExternalLink, Loader2 } from "lucide-react"
+import { Lesson, Attachment, LessonLink } from "@/lib/types"
+import { AttachmentIcon } from "@/components/ui/attachment-icon"
 import { VideoPlayer } from "@/components/video-player"
 import { ProgressService } from "@/lib/services/progress"
 import { useAuth } from "@/hooks/useAuth"
@@ -24,9 +24,12 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [isCompleted, setIsCompleted] = useState(false)
 
   useEffect(() => {
     let isMounted = true
+    let progressInterval: NodeJS.Timeout | null = null
     
     const fetchData = async () => {
       try {
@@ -42,7 +45,6 @@ export default function LessonPage() {
 
         if (isMounted) {
           setLesson(data.data.lesson)
-          // Reconstruct the course object with lessons
           setCourse({
             ...data.data.course,
             lessons: data.data.allLessons
@@ -52,9 +54,17 @@ export default function LessonPage() {
           if (user) {
             try {
               await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+              
+              // Start periodic progress updates
+              progressInterval = setInterval(async () => {
+                try {
+                  await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 1, false)
+                } catch (err) {
+                  console.error('Error updating progress:', err)
+                }
+              }, 60000) // Update every minute
             } catch (err) {
-              console.error('Error updating progress:', err)
-              // Don't throw error here as it's not critical
+              console.error('Error initializing progress:', err)
             }
           }
         }
@@ -74,20 +84,24 @@ export default function LessonPage() {
     
     return () => {
       isMounted = false
+      if (progressInterval) {
+        clearInterval(progressInterval)
+      }
     }
   }, [courseId, lessonId, user])
 
-  const handleVideoEnd = async () => {
-    if (!user || !lesson) return
-    
-    try {
-      await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, true)
-      if (lesson.quiz) {
-        setShowQuiz(true)
+  const handleVideoProgress = async (progress: number) => {
+    setVideoProgress(progress)
+    if (progress >= 90 && !isCompleted) {
+      setIsCompleted(true)
+      try {
+        await ProgressService.updateLessonProgress(user!.uid, courseId, lessonId, 0, true)
+        if (lesson?.quiz) {
+          setShowQuiz(true)
+        }
+      } catch (err) {
+        console.error('Error marking lesson as completed:', err)
       }
-    } catch (err) {
-      console.error('Error updating progress:', err)
-      toast.error('Progressni saqlashda xatolik yuz berdi')
     }
   }
 
@@ -131,35 +145,95 @@ export default function LessonPage() {
   return (
     <div className="container py-8">
       <div className="space-y-8">
-        <div>
-          <Link
-            href={`/courses/${courseId}`}
-            className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-block"
-          >
-            ← {course.title}
-          </Link>
-          <h1 className="text-2xl font-bold mb-2">{lesson.title}</h1>
-          <p className="text-muted-foreground">{lesson.description}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <Link
+              href={`/courses/${courseId}`}
+              className="text-sm text-muted-foreground hover:text-foreground mb-2 flex items-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              {course.title}
+            </Link>
+            <h1 className="text-2xl font-bold">{lesson.title}</h1>
+            <p className="text-muted-foreground mt-1">{lesson.description}</p>
+          </div>
+          {isCompleted && (
+            <div className="flex items-center text-green-500">
+              <CheckCircle className="w-5 h-5 mr-2" />
+              <span>Tugatildi</span>
+            </div>
+          )}
         </div>
 
         {lesson.videoUrl && (
           <Card>
             <CardContent className="p-0 aspect-video">
-              <video
-                className="w-full h-full"
-                src={lesson.videoUrl}
-                controls
-                onEnded={handleVideoEnd}
+              <VideoPlayer
+                url={lesson.videoUrl}
+                onProgress={handleVideoProgress}
               />
             </CardContent>
           </Card>
         )}
 
-        <Card>
-          <CardContent className="prose prose-slate dark:prose-invert max-w-none py-6">
-            <div dangerouslySetInnerHTML={{ __html: lesson.content || '' }} />
-          </CardContent>
-        </Card>
+        {lesson.content && (
+          <Card>
+            <CardContent className="prose prose-slate dark:prose-invert max-w-none py-6">
+              <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+            </CardContent>
+          </Card>
+        )}
+
+        {lesson.attachments && lesson.attachments.length > 0 && (
+          <Card>
+            <CardContent className="py-6">
+              <h3 className="text-lg font-semibold mb-4">Qo'shimcha materiallar</h3>
+              <div className="space-y-4">
+                {lesson.attachments.map((attachment: Attachment) => (
+                  <div key={attachment.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <AttachmentIcon type={attachment.type} className="w-8 h-8 mr-3" />
+                      <div>
+                        <p className="font-medium">{attachment.title}</p>
+                        <p className="text-sm text-muted-foreground">{attachment.description}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={attachment.url} target="_blank">
+                        <Download className="w-4 h-4 mr-2" />
+                        Yuklab olish
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {lesson.links && lesson.links.length > 0 && (
+          <Card>
+            <CardContent className="py-6">
+              <h3 className="text-lg font-semibold mb-4">Foydali havolalar</h3>
+              <div className="space-y-4">
+                {lesson.links.map((link: LessonLink) => (
+                  <div key={link.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{link.title}</p>
+                      <p className="text-sm text-muted-foreground">{link.description}</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={link.url} target="_blank">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Ochish
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
           <Quiz
@@ -173,7 +247,7 @@ export default function LessonPage() {
           {previousLesson ? (
             <Link href={`/courses/${courseId}/lessons/${previousLesson.id}`}>
               <Button variant="outline">
-                <ChevronLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 {previousLesson.title}
               </Button>
             </Link>
@@ -185,14 +259,14 @@ export default function LessonPage() {
             <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
               <Button>
                 {nextLesson.title}
-                <ChevronRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           ) : (
             <Link href={`/courses/${courseId}`}>
               <Button>
                 Kursni tugatish
-                <ChevronRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           )}

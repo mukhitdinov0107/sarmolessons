@@ -574,44 +574,44 @@ export class ProgressService {
     }
   }
 
-  // Update lesson progress and stats
+  // Update lesson progress
   static async updateLessonProgress(
     userId: string,
     courseId: string,
     lessonId: string,
-    timeSpentMinutes: number,
-    completed: boolean = false
+    timeSpent: number,
+    isCompleted: boolean
   ): Promise<void> {
     try {
-      const batch = db.batch();
+      const enrollmentRef = collection(db, 'enrollments');
+      const q = query(
+        enrollmentRef,
+        where('userId', '==', userId),
+        where('courseId', '==', courseId),
+        limit(1)
+      );
       
-      // Update lesson progress
-      const progressRef = doc(db, 'lessonProgress', `${userId}_${courseId}_${lessonId}`);
-      batch.set(progressRef, {
-        userId,
-        courseId,
-        lessonId,
-        timeSpentMinutes,
-        completed,
-        lastUpdated: serverTimestamp()
-      }, { merge: true });
-
-      // Update user stats
-      const userRef = doc(db, 'users', userId);
-      if (completed) {
-        batch.update(userRef, {
-          'stats.completedLessons': increment(1),
-          'stats.totalLearningTime': increment(timeSpentMinutes),
-          'stats.lastUpdated': serverTimestamp()
-        });
-      } else {
-        batch.update(userRef, {
-          'stats.totalLearningTime': increment(timeSpentMinutes),
-          'stats.lastUpdated': serverTimestamp()
-        });
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        throw new Error('Enrollment not found');
       }
-
-      await batch.commit();
+      
+      const enrollmentDoc = snapshot.docs[0];
+      const enrollment = enrollmentDoc.data() as Enrollment;
+      
+      // Update the enrollment document
+      const updateData: any = {
+        'progress.lastAccessedAt': serverTimestamp(),
+        'progress.totalTimeSpent': increment(timeSpent),
+        updatedAt: serverTimestamp(),
+      };
+      
+      if (isCompleted && !enrollment.progress.completedLessons.includes(lessonId)) {
+        updateData['progress.completedLessons'] = [...enrollment.progress.completedLessons, lessonId];
+      }
+      
+      await updateDoc(doc(db, 'enrollments', enrollmentDoc.id), updateData);
+      
     } catch (error) {
       console.error('Error updating lesson progress:', error);
       throw error;
