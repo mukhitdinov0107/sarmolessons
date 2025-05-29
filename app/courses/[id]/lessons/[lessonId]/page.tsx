@@ -6,18 +6,31 @@ import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight, CheckCircle, Download, ExternalLink, Loader2 } from "lucide-react"
-import { Lesson, Attachment, LessonLink } from "@/lib/types"
+import { Lesson, Attachment, Course } from "@/lib/types"
 import { AttachmentIcon } from "@/components/ui/attachment-icon"
 import { VideoPlayer } from "@/components/video-player"
 import { ProgressService } from "@/lib/services/progress"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Quiz } from "@/components/Quiz"
 
-export default function LessonPage() {
-  const { id: courseId, lessonId } = useParams() as { id: string; lessonId: string }
+interface Link {
+  id: string;
+  url: string;
+  title?: string;
+  description?: string;
+}
+
+interface LessonPageProps {}
+
+export default function LessonPage({}: LessonPageProps) {
+  const router = useRouter()
+  const params = useParams<{ id: string; lessonId: string }>()
+  const courseId = Array.isArray(params.id) ? params.id[0] : params.id || ''
+  const lessonId = Array.isArray(params.lessonId) ? params.lessonId[0] : params.lessonId || ''
+  
   const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [lesson, setLesson] = useState<Lesson | null>(null)
@@ -27,7 +40,18 @@ export default function LessonPage() {
   const [videoProgress, setVideoProgress] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
 
+  // Validate route params
   useEffect(() => {
+    if (!courseId || !lessonId) {
+      setError("Noto'g'ri dars manzili")
+      setLoading(false)
+      return
+    }
+  }, [courseId, lessonId])
+
+  useEffect(() => {
+    if (!courseId || !lessonId) return
+    
     let isMounted = true
     let progressInterval: NodeJS.Timeout | null = null
     
@@ -92,10 +116,10 @@ export default function LessonPage() {
 
   const handleVideoProgress = async (progress: number) => {
     setVideoProgress(progress)
-    if (progress >= 90 && !isCompleted) {
-      setIsCompleted(true)
+    if (progress >= 90 && !isCompleted && user?.uid) {
       try {
-        await ProgressService.updateLessonProgress(user!.uid, courseId, lessonId, 0, true)
+        await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, true)
+        setIsCompleted(true)
         if (lesson?.quiz) {
           setShowQuiz(true)
         }
@@ -136,7 +160,7 @@ export default function LessonPage() {
     )
   }
 
-  const currentIndex = course.lessons?.findIndex(l => l.id === lessonId) ?? -1
+  const currentIndex = course.lessons?.findIndex((l: { id: string }) => l.id === lessonId) ?? -1
   const previousLesson = currentIndex > 0 ? course.lessons?.[currentIndex - 1] : null
   const nextLesson = currentIndex < (course.lessons?.length ?? 0) - 1 
     ? course.lessons?.[currentIndex + 1] 
@@ -166,14 +190,19 @@ export default function LessonPage() {
         </div>
 
         {lesson.videoUrl && (
-          <Card>
-            <CardContent className="p-0 aspect-video">
-              <VideoPlayer
-                url={lesson.videoUrl}
-                onProgress={handleVideoProgress}
+          <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
+            {lesson.videoUrl ? (
+              <VideoPlayer 
+                videoUrl={lesson.videoUrl} 
+                title={lesson.title}
+                onProgressUpdate={handleVideoProgress}
               />
-            </CardContent>
-          </Card>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted">
+                <p className="text-muted-foreground">Video mavjud emas</p>
+              </div>
+            )}
+          </div>
         )}
 
         {lesson.content && (
@@ -185,91 +214,73 @@ export default function LessonPage() {
         )}
 
         {lesson.attachments && lesson.attachments.length > 0 && (
-          <Card>
-            <CardContent className="py-6">
-              <h3 className="text-lg font-semibold mb-4">Qo'shimcha materiallar</h3>
-              <div className="space-y-4">
-                {lesson.attachments.map((attachment: Attachment) => (
-                  <div key={attachment.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <AttachmentIcon type={attachment.type} className="w-8 h-8 mr-3" />
-                      <div>
-                        <p className="font-medium">{attachment.title}</p>
-                        <p className="text-sm text-muted-foreground">{attachment.description}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={attachment.url} target="_blank">
-                        <Download className="w-4 h-4 mr-2" />
-                        Yuklab olish
-                      </Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-2">
+            <h3 className="font-medium">Yuklab olish uchun fayllar</h3>
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {lesson.attachments.map((attachment: Attachment) => (
+                <a
+                  key={attachment.id}
+                  href={attachment.url}
+                  download
+                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <AttachmentIcon type={attachment.type} className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">{attachment.name}</span>
+                  <Download className="h-4 w-4 ml-auto text-muted-foreground" />
+                </a>
+              ))}
+            </div>
+          </div>
         )}
 
         {lesson.links && lesson.links.length > 0 && (
-          <Card>
-            <CardContent className="py-6">
-              <h3 className="text-lg font-semibold mb-4">Foydali havolalar</h3>
-              <div className="space-y-4">
-                {lesson.links.map((link: LessonLink) => (
-                  <div key={link.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{link.title}</p>
-                      <p className="text-sm text-muted-foreground">{link.description}</p>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={link.url} target="_blank">
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Ochish
-                      </Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-2">
+            <h3 className="font-medium">Foydali havolalar</h3>
+            <div className="space-y-2">
+              {lesson.links.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{link.title || 'Havola'}</span>
+                </a>
+              ))}
+            </div>
+          </div>
         )}
 
         {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
-          <Quiz
-            courseId={courseId}
-            lessonId={lessonId}
-            quiz={lesson.quiz}
-          />
+          <div className="mt-8">
+            <Quiz
+              courseId={courseId}
+              lessonId={lessonId}
+              quiz={lesson.quiz}
+            />
+          </div>
         )}
 
         <div className="flex justify-between mt-8">
-          {previousLesson ? (
-            <Link href={`/courses/${courseId}/lessons/${previousLesson.id}`}>
-              <Button variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {previousLesson.title}
-              </Button>
-            </Link>
-          ) : (
-            <div />
-          )}
-
-          {nextLesson ? (
-            <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
-              <Button>
-                {nextLesson.title}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          ) : (
-            <Link href={`/courses/${courseId}`}>
-              <Button>
-                Kursni tugatish
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={() => previousLesson && router.push(`/courses/${courseId}/lessons/${previousLesson.id}`)} 
+            disabled={!previousLesson}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Oldingi dars
+          </Button>
+          <Button 
+            onClick={() => nextLesson 
+              ? router.push(`/courses/${courseId}/lessons/${nextLesson.id}`)
+              : router.push(`/courses/${courseId}`)
+            }
+          >
+            {nextLesson ? 'Keyingi dars' : 'Kursni tugatish'}
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
       </div>
     </div>
