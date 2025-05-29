@@ -175,8 +175,9 @@ export interface LessonProgress {
   completedAt: Timestamp;
   timeSpent: number; // in minutes
   watchPercentage: number;
-  quizScore?: number;
-  attempts: number;
+  quizScore?: number; // Highest score achieved
+  attempts: number; // Total number of attempts
+  quizAttempts?: QuizAttempt[]; // Detailed list of all attempts
 }
 
 // Achievement types
@@ -199,6 +200,7 @@ export interface AchievementCriteria {
   target: number;
   courseId?: string;
   lessonId?: string;
+  quizId?: string; // For quiz-specific achievements
 }
 
 export interface UserAchievement {
@@ -210,6 +212,22 @@ export interface UserAchievement {
   unlockedAt: Timestamp;
   isNew: boolean;
   isRead?: boolean;
+}
+
+export interface UserAnswer {
+  questionId: string;
+  answer: string | number | string[]; // User's answer
+  isCorrect: boolean;
+}
+
+export interface QuizAttempt {
+  id: string;
+  attemptNumber: number;
+  answers: UserAnswer[];
+  score: number; // Score for this attempt (percentage or points)
+  passed: boolean; // Whether this attempt passed the quiz
+  submittedAt: Timestamp;
+  timeTaken?: number; // in seconds
 }
 
 // Analytics types

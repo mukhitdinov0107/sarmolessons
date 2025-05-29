@@ -617,4 +617,250 @@ export class ProgressService {
       throw error;
     }
   }
+
+  // Submit a quiz attempt and update progress
+  static async submitQuizAttempt(
+    userId: string,
+    courseId: string,
+    lessonId: string,
+    answers: UserAnswer[],
+    timeTaken: number
+  ): Promise<ApiResponse<QuizAttempt>> {
+    try {
+      // Get the enrollment and lesson data
+      const enrollment = await this.getUserEnrollment(userId, courseId);
+      if (!enrollment) {
+        return {
+          success: false,
+          error: 'Kursga yozilmagansiz'
+        };
+      }
+
+      // Get the course and lesson data to access quiz information
+      const course = await CourseService.getCourseById(courseId);
+      const lesson = course?.lessons?.find(l => l.id === lessonId);
+      
+      if (!lesson?.quiz) {
+        return {
+          success: false,
+          error: 'Test topilmadi'
+        };
+      }
+
+      // Calculate the score
+      let correctAnswers = 0;
+      let totalPoints = 0;
+      const gradedAnswers: UserAnswer[] = answers.map(answer => {
+        const question = lesson.quiz!.questions.find(q => q.id === answer.questionId);
+        if (!question) return answer;
+
+        const isCorrect = Array.isArray(answer.answer) 
+          ? JSON.stringify(answer.answer.sort()) === JSON.stringify(question.correctAnswer)
+          : answer.answer === question.correctAnswer;
+
+        if (isCorrect) {
+          correctAnswers++;
+          totalPoints += question.points;
+        }
+
+        return {
+          ...answer,
+          isCorrect
+        };
+      });
+
+      const totalPossiblePoints = lesson.quiz.questions.reduce((sum, q) => sum + q.points, 0);
+      const scorePercentage = (totalPoints / totalPossiblePoints) * 100;
+      const passed = scorePercentage >= lesson.quiz.passingScore;
+
+      // Create the quiz attempt object
+      const quizAttempt: Omit<QuizAttempt, 'id'> = {
+        attemptNumber: (enrollment.progress.completedLessons.find(l => l.lessonId === lessonId)?.quizAttempts?.length || 0) + 1,
+        answers: gradedAnswers,
+        score: scorePercentage,
+        passed,
+        submittedAt: Timestamp.now(),
+        timeTaken
+      };
+
+      // Update the enrollment document
+      const enrollmentRef = doc(db, 'enrollments', enrollment.id);
+      await runTransaction(db, async (transaction) => {
+        const enrollmentDoc = await transaction.get(enrollmentRef);
+        if (!enrollmentDoc.exists()) {
+          throw new Error('Enrollment not found');
+        }
+
+        const currentData = enrollmentDoc.data() as Omit<Enrollment, 'id'>;
+        const lessonProgressIndex = currentData.progress.completedLessons.findIndex(
+          l => l.lessonId === lessonId
+        );
+
+        let updatedCompletedLessons = [...currentData.progress.completedLessons];
+        const existingProgress = updatedCompletedLessons[lessonProgressIndex];
+
+        if (lessonProgressIndex >= 0) {
+          // Update existing lesson progress
+          updatedCompletedLessons[lessonProgressIndex] = {
+            ...existingProgress,
+            quizScore: Math.max(existingProgress.quizScore || 0, scorePercentage),
+            attempts: (existingProgress.attempts || 0) + 1,
+            quizAttempts: [...(existingProgress.quizAttempts || []), { id: doc(collection(db, 'dummy')).id, ...quizAttempt }]
+          };
+        } else {
+          // Create new lesson progress
+          updatedCompletedLessons.push({
+            lessonId,
+            completedAt: Timestamp.now(),
+            timeSpent: 0,
+            watchPercentage: 0,
+            quizScore: scorePercentage,
+            attempts: 1,
+            quizAttempts: [{ id: doc(collection(db, 'dummy')).id, ...quizAttempt }]
+          });
+        }
+
+        // Update the enrollment
+        transaction.update(enrollmentRef, {
+          'progress.completedLessons': updatedCompletedLessons,
+          lastAccessedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        // If this is the first time passing the quiz, check for achievements
+        if (passed && (!existingProgress?.quizAttempts || !existingProgress.quizAttempts.some(a => a.passed))) {
+          await this.checkAndUnlockAchievements(userId);
+        }
+      });
+
+      return {
+        success: true,
+        data: { id: doc(collection(db, 'dummy')).id, ...quizAttempt },
+        message: passed ? 'Test muvaffaqiyatli topshirildi!' : 'Test natijasi yetarli emas'
+      };
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      return {
+        success: false,
+        error: error.message || 'Testni topshirishda xatolik yuz berdi'
+      };
+    }
+  }
+
+  // Get quiz attempts for a specific lesson
+  static async getQuizAttempts(
+    userId: string,
+    courseId: string,
+    lessonId: string
+  ): Promise<ApiResponse<QuizAttempt[]>> {
+    try {
+      const enrollment = await this.getUserEnrollment(userId, courseId);
+      if (!enrollment) {
+        return {
+          success: false,
+          error: 'Kursga yozilmagansiz'
+        };
+      }
+
+      const lessonProgress = enrollment.progress.completedLessons.find(
+        l => l.lessonId === lessonId
+      );
+
+      return {
+        success: true,
+        data: lessonProgress?.quizAttempts || []
+      };
+    } catch (error: any) {
+      console.error('Error getting quiz attempts:', error);
+      return {
+        success: false,
+        error: error.message || 'Test natijalarini olishda xatolik yuz berdi'
+      };
+    }
+  }
+
+  // Get the best quiz score for a lesson
+  static async getBestQuizScore(
+    userId: string,
+    courseId: string,
+    lessonId: string
+  ): Promise<ApiResponse<number>> {
+    try {
+      const enrollment = await this.getUserEnrollment(userId, courseId);
+      if (!enrollment) {
+        return {
+          success: false,
+          error: 'Kursga yozilmagansiz'
+        };
+      }
+
+      const lessonProgress = enrollment.progress.completedLessons.find(
+        l => l.lessonId === lessonId
+      );
+
+      return {
+        success: true,
+        data: lessonProgress?.quizScore || 0
+      };
+    } catch (error: any) {
+      console.error('Error getting best quiz score:', error);
+      return {
+        success: false,
+        error: error.message || 'Test natijasini olishda xatolik yuz berdi'
+      };
+    }
+  }
+
+  // Get active students (students who have attempted quizzes) for a course
+  static async getActiveStudents(courseId: string): Promise<ApiResponse<User[]>> {
+    try {
+      const enrollmentsRef = collection(db, 'enrollments');
+      const q = query(
+        enrollmentsRef,
+        where('courseId', '==', courseId),
+        where('status', '==', 'active')
+      );
+      
+      const snapshot = await getDocs(q);
+      const activeUserIds = new Set<string>();
+
+      snapshot.docs.forEach(doc => {
+        const enrollment = doc.data() as Enrollment;
+        const hasQuizAttempts = enrollment.progress.completedLessons.some(
+          lesson => lesson.quizAttempts && lesson.quizAttempts.length > 0
+        );
+        if (hasQuizAttempts) {
+          activeUserIds.add(enrollment.userId);
+        }
+      });
+
+      if (activeUserIds.size === 0) {
+        return {
+          success: true,
+          data: []
+        };
+      }
+
+      // Get user details for active students
+      const usersRef = collection(db, 'users');
+      const userDocs = await Promise.all(
+        Array.from(activeUserIds).map(uid => getDoc(doc(usersRef, uid)))
+      );
+
+      const activeUsers = userDocs
+        .filter(doc => doc.exists())
+        .map(doc => ({ ...doc.data(), uid: doc.id }) as User);
+
+      return {
+        success: true,
+        data: activeUsers
+      };
+    } catch (error: any) {
+      console.error('Error getting active students:', error);
+      return {
+        success: false,
+        error: error.message || 'Faol o\'quvchilarni olishda xatolik yuz berdi'
+      };
+    }
+  }
 }

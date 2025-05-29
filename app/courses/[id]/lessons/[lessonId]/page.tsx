@@ -13,313 +13,178 @@ import { VideoPlayer } from "@/components/video-player"
 import { ProgressService } from "@/lib/services/progress"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
+import { useParams } from 'next/navigation'
+import { Skeleton } from "@/components/ui/skeleton"
+import { Quiz } from "@/components/Quiz"
+import { CourseService } from '@/lib/services/courses'
+import { Course } from '@/lib/types'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-interface LessonPageProps {
-  params: Promise<{ id: string; lessonId: string }>
-}
-
-export default function LessonPage({ params }: LessonPageProps) {
+export default function LessonPage() {
+  const { id: courseId, lessonId } = useParams() as { id: string; lessonId: string }
+  const { user } = useAuth()
+  const [course, setCourse] = useState<Course | null>(null)
   const [lesson, setLesson] = useState<Lesson | null>(null)
-  const [allLessons, setAllLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
-  const [courseId, setCourseId] = useState<string>("")
-  const [lessonId, setLessonId] = useState<string>("")
+  const [error, setError] = useState<string | null>(null)
+  const [showQuiz, setShowQuiz] = useState(false)
   const [videoProgress, setVideoProgress] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
   const [savingCompletion, setSavingCompletion] = useState(false)
-  const { user } = useAuth()
 
   useEffect(() => {
-    const loadData = async () => {
-      const resolvedParams = await params
-      setCourseId(resolvedParams.id)
-      setLessonId(resolvedParams.lessonId)
-      
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/courses/' + resolvedParams.id + '/lessons/' + resolvedParams.lessonId)
-        if (response.ok) {
-          const data = await response.json()
-          setLesson(data.lesson)
-          setAllLessons(data.allLessons)
-        } else {
-          // Fallback to reading from JSON directly
-          const coursesResponse = await fetch('/data/courses.json')
-          const coursesData = await coursesResponse.json()
-          
-          const course = coursesData.courses.find((c: any) => c.id === resolvedParams.id)
-          if (course && course.lessons) {
-            const foundLesson = course.lessons.find((l: Lesson) => l.id === resolvedParams.lessonId)
-            setLesson(foundLesson || null)
-            setAllLessons(course.lessons)
-          }
+        const courseResponse = await CourseService.getCourseById(courseId)
+        if (!courseResponse.success || !courseResponse.data) {
+          throw new Error(courseResponse.error || 'Kurs topilmadi')
         }
-      } catch (error) {
-        console.error('Error loading lesson:', error)
+
+        const course = courseResponse.data
+        setCourse(course)
+
+        const lesson = course.lessons?.find(l => l.id === lessonId)
+        if (!lesson) {
+          throw new Error('Dars topilmadi')
+        }
+        setLesson(lesson)
+
+        // Start tracking progress
+        if (user) {
+          await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+        }
+      } catch (err: any) {
+        console.error('Error fetching lesson:', err)
+        setError(err.message || 'Darsni yuklashda xatolik yuz berdi')
       } finally {
         setLoading(false)
       }
     }
 
-    loadData()
-  }, [params])
-  
-  // Check if lesson is already completed when user is logged in
-  useEffect(() => {
-    const checkLessonCompletion = async () => {
-      if (user?.uid && courseId && lessonId) {
-        try {
-          console.log('Checking lesson completion for:', user.uid, courseId, lessonId)
-          const lessonProgress = await ProgressService.getLessonProgress(user.uid, courseId, lessonId)
-          console.log('Lesson progress:', lessonProgress)
-          if (lessonProgress) {
-            setIsCompleted(true)
-          }
-        } catch (error) {
-          console.error('Error checking lesson completion:', error)
-        }
-      }
-    }
-    
-    if (user && !loading) {
-      checkLessonCompletion()
-    }
-  }, [user, courseId, lessonId])
+    fetchData()
+  }, [courseId, lessonId, user])
 
-  const handleVideoProgress = (progress: number) => {
-    setVideoProgress(progress)
-    // Only auto-complete if progress is high enough
-    if (progress >= 90 && !isCompleted && user?.uid) {
-      completeLesson()
-    }
-  }
-  
-  const completeLesson = async () => {
-    if (!user?.uid || !courseId || !lessonId || savingCompletion) return
+  // Update progress periodically
+  useEffect(() => {
+    if (!user || !lesson) return
+
+    const interval = setInterval(async () => {
+      await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 1, false)
+    }, 60000) // Update every minute
+
+    return () => clearInterval(interval)
+  }, [user, courseId, lessonId, lesson])
+
+  const handleVideoEnd = async () => {
+    if (!user || !lesson) return
     
-    setSavingCompletion(true)
-    try {
-      console.log('Completing lesson:', user.uid, courseId, lessonId)
-      const timeSpent = Math.floor(Math.random() * 10) + 5 // Mock time spent (5-15 minutes)
-      const result = await ProgressService.completeLessonAndUpdateProgress(
-        user.uid,
-        courseId,
-        lessonId,
-        timeSpent,
-        videoProgress
-      )
-      
-      console.log('Completion result:', result)
-      if (result.success) {
-        setIsCompleted(true)
-        toast.success('Dars muvaffaqiyatli tugallandi!', {
-          description: 'Kurs progressingiz yangilandi',
-          duration: 3000
-        })
-      } else {
-        toast.error(result.error || 'Xatolik yuz berdi', {
-          description: 'Darsni tugatishda xatolik yuz berdi',
-          duration: 3000
-        })
-      }
-    } catch (error) {
-      console.error('Error completing lesson:', error)
-      toast.error('Xatolik yuz berdi', {
-        description: 'Darsni tugatishda xatolik yuz berdi',
-        duration: 3000
-      })
-    } finally {
-      setSavingCompletion(false)
+    await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, true)
+    if (lesson.quiz) {
+      setShowQuiz(true)
     }
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <div className="flex-1 container px-4 py-8 pb-20 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Dars yuklanmoqda...</p>
-          </div>
+      <div className="container py-8">
+        <div className="space-y-8">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-[400px]" />
+          <Skeleton className="h-32" />
         </div>
-        <MobileNavigation />
-      </main>
+      </div>
     )
   }
 
-  if (!lesson) {
+  if (error || !lesson || !course) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <div className="flex-1 container px-4 py-8 pb-20 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">Dars topilmadi</p>
-            <Button asChild>
-              <Link href={`/courses/${courseId}`}>Kursga qaytish</Link>
-            </Button>
-          </div>
-        </div>
-        <MobileNavigation />
-      </main>
+      <div className="container py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-destructive">
+              <p>{error || 'Dars topilmadi'}</p>
+              <Link href={`/courses/${courseId}`}>
+                <Button variant="outline" className="mt-4">
+                  Kursga qaytish
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
-  // Find previous and next lessons
-  const currentIndex = allLessons.findIndex(l => l.id === lessonId)
-  const previousLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null
-  const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
+  const currentIndex = course.lessons?.findIndex(l => l.id === lessonId) ?? -1
+  const previousLesson = currentIndex > 0 ? course.lessons?.[currentIndex - 1] : null
+  const nextLesson = currentIndex < (course.lessons?.length ?? 0) - 1 
+    ? course.lessons?.[currentIndex + 1] 
+    : null
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <div className="flex-1 container px-4 py-8 pb-20">
-        <Button variant="ghost" size="sm" className="mb-4" asChild>
-          <Link href={`/courses/${courseId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Kursga qaytish
-          </Link>
-        </Button>
+    <div className="container py-8">
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">{lesson.title}</h1>
+          <p className="text-muted-foreground">{lesson.description}</p>
+        </div>
 
-        <h1 className="text-xl font-bold mb-4">{lesson.title}</h1>
+        {lesson.videoUrl && (
+          <Card>
+            <CardContent className="p-0 aspect-video">
+              <video
+                className="w-full h-full"
+                src={lesson.videoUrl}
+                controls
+                onEnded={handleVideoEnd}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Video Player */}
-        <div className="mb-6">
-          <VideoPlayer
-            videoUrl={lesson.videoUrl || ""}
-            title={lesson.title}
-            onProgressUpdate={handleVideoProgress}
+        <Card>
+          <CardContent className="prose prose-slate dark:prose-invert max-w-none py-6">
+            <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+          </CardContent>
+        </Card>
+
+        {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
+          <Quiz
+            courseId={courseId}
+            lessonId={lessonId}
+            quiz={lesson.quiz}
           />
-        </div>
-
-        {/* Overall Progress */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm mb-2">
-            <span>Dars jarayoni</span>
-            <span>{Math.round(videoProgress)}%</span>
-          </div>
-          <Progress value={videoProgress} className="h-2" />
-        </div>
-
-        {/* Lesson Content */}
-        <div className="prose prose-sm max-w-none mb-8" dangerouslySetInnerHTML={{ __html: lesson.content }} />
-
-        {/* Attachments Section */}
-        {lesson.attachments && lesson.attachments.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="h-5 w-5" />
-                Qo'shimcha materiallar
-              </CardTitle>
-              <CardDescription>Darsga tegishli fayllar va materiallar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {lesson.attachments.map((attachment) => (
-                  <div key={attachment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <AttachmentIcon type={attachment.type} />
-                      <div>
-                        <p className="font-medium">{attachment.name}</p>
-                        <p className="text-sm text-muted-foreground">{attachment.description}</p>
-                        <p className="text-xs text-muted-foreground">{attachment.size}</p>
-                      </div>
-                    </div>
-                    <Button size="sm" asChild>
-                      <a href={attachment.url} download target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-1" />
-                        Yuklab olish
-                      </a>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         )}
 
-        {/* Links Section */}
-        {lesson.links && lesson.links.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ExternalLink className="h-5 w-5" />
-                Foydali havolalar
-              </CardTitle>
-              <CardDescription>Darsga tegishli qo'shimcha resurslar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {lesson.links.map((link) => (
-                  <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <ExternalLink className="h-4 w-4" />
-                      <div>
-                        <p className="font-medium">{link.title}</p>
-                        <p className="text-sm text-muted-foreground">{link.description}</p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={link.url} target="_blank" rel="noopener noreferrer">
-                        Ochish
-                        <ExternalLink className="h-4 w-4 ml-1" />
-                      </a>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Navigation */}
-        <div className="flex justify-between mb-6">
-          {previousLesson && (
-            <Button variant="outline" asChild>
-              <Link href={`/courses/${courseId}/lessons/${previousLesson.id}`}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Oldingi dars
-              </Link>
-            </Button>
+        <div className="flex justify-between mt-8">
+          {previousLesson ? (
+            <Link href={`/courses/${courseId}/lessons/${previousLesson.id}`}>
+              <Button variant="outline">
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                {previousLesson.title}
+              </Button>
+            </Link>
+          ) : (
+            <div />
           )}
-          
-          <div className="flex-1" />
-          
-          {nextLesson && (
-            <Button asChild>
-              <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
-                Keyingi dars
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          )}
-        </div>
 
-        {/* Completion Button */}
-        <div className="text-center">
-          <Button 
-            variant={isCompleted ? "default" : "outline"} 
-            className="w-full"
-            onClick={completeLesson}
-            disabled={!user?.uid || savingCompletion || loading}
-          >
-            {savingCompletion ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saqlanmoqda...
-              </>
-            ) : (
-              <>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                {isCompleted ? "Dars tugallandi!" : "Darsni tugatilgan deb belgilash"}
-              </>
-            )}
-          </Button>
-          {!user?.uid && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Progressni saqlash uchun tizimga kiring
-            </p>
+          {nextLesson ? (
+            <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
+              <Button>
+                {nextLesson.title}
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          ) : (
+            <Link href={`/courses/${courseId}`}>
+              <Button>
+                Kursni tugatish
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           )}
         </div>
       </div>
-      <MobileNavigation />
-    </main>
+    </div>
   )
 }
