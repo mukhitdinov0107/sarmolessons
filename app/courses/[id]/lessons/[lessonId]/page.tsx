@@ -6,9 +6,8 @@ import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { MobileNavigation } from "@/components/mobile-navigation"
-import { ArrowLeft, ArrowRight, CheckCircle, Download, ExternalLink, Loader2 } from "lucide-react"
-import { Lesson, Attachment, LessonLink } from "@/lib/types"
-import { AttachmentIcon } from "@/components/ui/attachment-icon"
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Lesson, Course } from "@/lib/types"
 import { VideoPlayer } from "@/components/video-player"
 import { ProgressService } from "@/lib/services/progress"
 import { useAuth } from "@/hooks/useAuth"
@@ -16,9 +15,6 @@ import { toast } from "sonner"
 import { useParams } from 'next/navigation'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Quiz } from "@/components/Quiz"
-import { CourseService } from '@/lib/services/courses'
-import { Course } from '@/lib/types'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function LessonPage() {
   const { id: courseId, lessonId } = useParams() as { id: string; lessonId: string }
@@ -28,59 +24,70 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
-  const [videoProgress, setVideoProgress] = useState(0)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [savingCompletion, setSavingCompletion] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+    
     const fetchData = async () => {
       try {
-        const courseResponse = await CourseService.getCourseById(courseId)
-        if (!courseResponse.success || !courseResponse.data) {
-          throw new Error(courseResponse.error || 'Kurs topilmadi')
+        const response = await fetch(`/api/courses/${courseId}/lessons/${lessonId}`)
+        if (!response.ok) {
+          throw new Error('Darsni yuklashda xatolik yuz berdi')
+        }
+        
+        const data = await response.json()
+        if (!data.success) {
+          throw new Error(data.error || 'Darsni yuklashda xatolik yuz berdi')
         }
 
-        const course = courseResponse.data
-        setCourse(course)
-
-        const lesson = course.lessons?.find(l => l.id === lessonId)
-        if (!lesson) {
-          throw new Error('Dars topilmadi')
-        }
-        setLesson(lesson)
-
-        // Start tracking progress
-        if (user) {
-          await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+        if (isMounted) {
+          setLesson(data.data.lesson)
+          // Reconstruct the course object with lessons
+          setCourse({
+            ...data.data.course,
+            lessons: data.data.allLessons
+          })
+          
+          // Start tracking progress if user is logged in
+          if (user) {
+            try {
+              await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+            } catch (err) {
+              console.error('Error updating progress:', err)
+              // Don't throw error here as it's not critical
+            }
+          }
         }
       } catch (err: any) {
         console.error('Error fetching lesson:', err)
-        setError(err.message || 'Darsni yuklashda xatolik yuz berdi')
+        if (isMounted) {
+          setError(err.message || 'Darsni yuklashda xatolik yuz berdi')
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchData()
+    
+    return () => {
+      isMounted = false
+    }
   }, [courseId, lessonId, user])
-
-  // Update progress periodically
-  useEffect(() => {
-    if (!user || !lesson) return
-
-    const interval = setInterval(async () => {
-      await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 1, false)
-    }, 60000) // Update every minute
-
-    return () => clearInterval(interval)
-  }, [user, courseId, lessonId, lesson])
 
   const handleVideoEnd = async () => {
     if (!user || !lesson) return
     
-    await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, true)
-    if (lesson.quiz) {
-      setShowQuiz(true)
+    try {
+      await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, true)
+      if (lesson.quiz) {
+        setShowQuiz(true)
+      }
+    } catch (err) {
+      console.error('Error updating progress:', err)
+      toast.error('Progressni saqlashda xatolik yuz berdi')
     }
   }
 
@@ -125,6 +132,12 @@ export default function LessonPage() {
     <div className="container py-8">
       <div className="space-y-8">
         <div>
+          <Link
+            href={`/courses/${courseId}`}
+            className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-block"
+          >
+            ← {course.title}
+          </Link>
           <h1 className="text-2xl font-bold mb-2">{lesson.title}</h1>
           <p className="text-muted-foreground">{lesson.description}</p>
         </div>
@@ -144,7 +157,7 @@ export default function LessonPage() {
 
         <Card>
           <CardContent className="prose prose-slate dark:prose-invert max-w-none py-6">
-            <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+            <div dangerouslySetInnerHTML={{ __html: lesson.content || '' }} />
           </CardContent>
         </Card>
 

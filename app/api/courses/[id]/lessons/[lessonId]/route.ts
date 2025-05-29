@@ -36,11 +36,15 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    // Create a course object without lessons to avoid duplication
+    const { lessons, ...courseWithoutLessons } = course
     
     return NextResponse.json({
       success: true,
       data: {
         lesson,
+        course: courseWithoutLessons,
         allLessons: course.lessons
       }
     })
