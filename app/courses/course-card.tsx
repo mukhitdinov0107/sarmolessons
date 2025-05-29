@@ -38,7 +38,9 @@ export function CourseCard({ course }: CourseCardProps) {
       
       if (enrolled) {
         const enrollment = getEnrollment(course.id)
-        const completedLessons = enrollment?.progress?.completedLessons?.length || 0
+        const completedLessons = Array.isArray(enrollment?.progress?.completedLessons) 
+          ? enrollment.progress.completedLessons.length 
+          : 0
         const totalLessons = course.lessons?.length || 1
         setProgress(Math.round((completedLessons / totalLessons) * 100))
       }
