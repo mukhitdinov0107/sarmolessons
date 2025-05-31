@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, CheckCircle, Download, ExternalLink, Loader2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle, Download, ExternalLink, Loader2, PlayCircle, Beaker } from "lucide-react"
 import { Lesson, Attachment, Course } from "@/lib/types"
 import { AttachmentIcon } from "@/components/ui/attachment-icon"
 import { VideoPlayer } from "@/components/video-player"
@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { useParams, useRouter } from 'next/navigation'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Quiz } from "@/components/Quiz"
+import { generateMockQuiz, addMockQuizToLesson } from '@/utils/mockQuizData';
 
 interface Link {
   id: string;
@@ -39,6 +40,8 @@ export default function LessonPage({}: LessonPageProps) {
   const [showQuiz, setShowQuiz] = useState(false)
   const [videoProgress, setVideoProgress] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
+  const [quizPassed, setQuizPassed] = useState(false)
+  const [quizRequired, setQuizRequired] = useState(false)
 
   // Validate route params
   useEffect(() => {
@@ -85,6 +88,27 @@ export default function LessonPage({}: LessonPageProps) {
             // Initialize progress if not completed
             await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
           }
+          
+          // Check if this lesson has a quiz
+          if (data.data.lesson.quiz) {
+            setQuizRequired(true)
+            
+            // Check if quiz has been passed
+            if (lessonProgress?.quizScore && lessonProgress.quizScore >= (data.data.lesson.quiz.passingScore || 70)) {
+              setQuizPassed(true)
+              console.log('[LessonPage] Quiz already passed with score:', lessonProgress.quizScore)
+            } else if (lessonProgress?.quizAttempts && lessonProgress.quizAttempts.some(attempt => attempt.passed)) {
+              setQuizPassed(true)
+              console.log('[LessonPage] Quiz already passed in previous attempts')
+            } else {
+              console.log('[LessonPage] Quiz not yet passed')
+              setQuizPassed(false)
+              // If the lesson has a quiz and it's not passed, make sure to show it
+              if (!showQuiz) {
+                setShowQuiz(true)
+              }
+            }
+          }
               
           // Update progress every 2 minutes, but only if there's been activity
           progressInterval = setInterval(async () => {
@@ -93,14 +117,14 @@ export default function LessonPage({}: LessonPageProps) {
               try {
                 await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 1, false)
                 lastProgressUpdate = now
-              } catch (err) {
-                console.error('Error updating progress:', err)
+              } catch (err: any) {
+                console.error('Error updating progress:', err.message || err)
               }
             }
           }, 120000) // Check every 2 minutes
         }
       } catch (err: any) {
-        console.error('Error fetching lesson:', err)
+        console.error('Error fetching lesson:', err.message || err)
         if (isMounted) {
           setError(err.message || 'Darsni yuklashda xatolik yuz berdi')
         }
@@ -125,15 +149,23 @@ export default function LessonPage({}: LessonPageProps) {
     setVideoProgress(progress)
     if (progress >= 90 && !isCompleted && user?.uid) {
       try {
-        await ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
-        setIsCompleted(true)
-        if (lesson?.quiz) {
+        // If there's a quiz and it hasn't been passed, show the quiz
+        if (quizRequired && !quizPassed) {
           setShowQuiz(true)
+          toast.info("Darsni tugatish uchun testni topshiring")
+          return
         }
+        
+        // If no quiz or quiz passed, complete the lesson
+        const result = await ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
+        if (!result.success) {
+          throw new Error(result.error || 'Darsni tugatishda xatolik yuz berdi')
+        }
+        setIsCompleted(true)
         toast.success("Dars muvaffaqiyatli tugatildi!")
-      } catch (err) {
-        console.error('Error marking lesson as completed:', err)
-        toast.error("Darsni tugatishda xatolik yuz berdi")
+      } catch (err: any) {
+        console.error('Error marking lesson as completed:', err.message || err)
+        toast.error(err.message || "Darsni tugatishda xatolik yuz berdi")
       }
     }
   }
@@ -248,27 +280,73 @@ export default function LessonPage({}: LessonPageProps) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1.5">
                     <h3 className="text-lg font-semibold">Darsni tugatish</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Darsni tugatish uchun videoni oxirigacha ko'ring yoki tugmani bosing
-                    </p>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-muted-foreground">
+                        {isCompleted ? 'Dars tugatilgan' : 'Darsni tugatish'}
+                      </p>
+                      {lesson.quiz && !quizPassed && (
+                        <p className="text-xs text-amber-500 font-medium">
+                          Test topshirilishi kerak
+                        </p>
+                      )}
+                      {lesson.quiz && quizPassed && (
+                        <p className="text-xs text-green-500 font-medium">
+                          Test muvaffaqiyatli topshirildi
+                        </p>
+                      )}
+                      {/* Dev tool to add mock quiz */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2 text-xs bg-slate-100 hover:bg-slate-200"
+                        onClick={() => {
+                          if (lesson) {
+                            // Add a mock quiz to the lesson
+                            const lessonWithQuiz = addMockQuizToLesson(lesson);
+                            console.log('[MockData] Added mock quiz to lesson:', lessonWithQuiz);
+                            
+                            // Update the lesson state
+                            setLesson(lessonWithQuiz);
+                            
+                            // Reset quiz passed state to ensure quiz is shown
+                            setQuizPassed(false);
+                            
+                            toast.success('Test ma\'lumotlari qo\'shildi');
+                          } else {
+                            toast.error('Dars ma\'lumotlari yuklanmagan');
+                          }
+                        }}
+                      >
+                        <Beaker className="h-3 w-3 mr-1" />
+                        Test qo'shish
+                      </Button>
+                    </div>
                   </div>
                   <Button 
                     size="lg"
                     onClick={async () => {
                       if (!user?.uid) return
                       try {
-                        await ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
-                        setIsCompleted(true)
-                        if (lesson?.quiz) {
+                        // If there's a quiz and it hasn't been passed, show the quiz
+                        if (lesson.quiz && !quizPassed) {
                           setShowQuiz(true)
+                          toast.info("Darsni tugatish uchun testni topshiring")
+                          return
                         }
+                        
+                        // If no quiz or quiz passed, complete the lesson
+                        const result = await ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
+                        if (!result.success) {
+                          throw new Error(result.error || 'Darsni tugatishda xatolik yuz berdi')
+                        }
+                        setIsCompleted(true)
                         toast.success("Dars muvaffaqiyatli tugatildi!")
-                      } catch (err) {
-                        console.error('Error marking lesson as completed:', err)
-                        toast.error("Xatolik yuz berdi")
+                      } catch (err: any) {
+                        console.error('Error marking lesson as completed:', err.message || err)
+                        toast.error(err.message || "Darsni tugatishda xatolik yuz berdi")
                       }
                     }}
-                    disabled={loading}
+                    disabled={(lesson.quiz && !quizPassed) || loading}
                   >
                     {loading ? (
                       <>
@@ -360,13 +438,35 @@ export default function LessonPage({}: LessonPageProps) {
           </div>
 
           {/* Quiz Section */}
-          {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
+          {lesson.quiz && (showQuiz || !lesson.videoUrl || (lesson.quiz && !quizPassed)) && (
             <Card>
               <CardContent className="py-8">
                 <Quiz
                   courseId={courseId}
                   lessonId={lessonId}
                   quiz={lesson.quiz}
+                  onQuizComplete={(passed) => {
+                    if (passed) {
+                      setQuizPassed(true);
+                      toast.success("Test muvaffaqiyatli topshirildi!");
+                      
+                      // Auto-complete lesson if quiz is passed
+                      if (user?.uid && !isCompleted) {
+                        ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
+                          .then((result) => {
+                            if (!result.success) {
+                              throw new Error(result.error || 'Darsni tugatishda xatolik yuz berdi');
+                            }
+                            setIsCompleted(true);
+                            toast.success("Dars muvaffaqiyatli tugatildi!");
+                          })
+                          .catch((err: any) => {
+                            console.error('Error marking lesson as completed:', err.message || err);
+                            toast.error(err.message || "Darsni tugatishda xatolik yuz berdi");
+                          });
+                      }
+                    }
+                  }}
                 />
               </CardContent>
             </Card>

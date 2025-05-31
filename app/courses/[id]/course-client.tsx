@@ -25,7 +25,7 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { enrollments, isEnrolled, enrollInCourse, loading: enrollmentsLoading, refetch } = useEnrollments();
+  const { enrollments, loading: enrollmentsLoading, enrollInCourse, isEnrolled, refetch } = useEnrollments();
   
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons || []);
   const [loading, setLoading] = useState(false);
@@ -99,21 +99,35 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
   }, [courseId, user, enrollments, isEnrolled, lessons.length]);
 
   const handleEnroll = async () => {
+    console.log('Enroll button clicked');
+    
     if (!user) {
+      console.log('No user, redirecting to login');
       router.push(`/login?redirect=/courses/${courseId}`);
       return;
     }
 
+    console.log('Starting enrollment process');
     setEnrolling(true);
     try {
-      await enrollInCourse(courseId);
-      setEnrolled(true);
-      toast.success("Kursga muvaffaqiyatli yozildingiz!");
+      console.log('Calling enrollInCourse with courseId:', courseId);
+      const result = await enrollInCourse(courseId);
+      console.log('Enrollment result:', result);
+      
+      if (result.success) {
+        setEnrolled(true);
+        console.log('Enrollment successful, refreshing data');
+        // Force refresh enrollments to update UI
+        await refetch();
+      } else {
+        console.log('Enrollment failed:', result.error);
+      }
     } catch (error) {
       console.error('Error enrolling in course:', error);
       toast.error('Kursga yozilishda xatolik yuz berdi');
     } finally {
       setEnrolling(false);
+      console.log('Enrollment process completed');
     }
   };
 
@@ -170,11 +184,17 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
                     <Progress value={progress} className="h-2 bg-muted" />
                   </div>
                 ) : (
-                  <Button 
-                    onClick={handleEnroll} 
-                    disabled={enrolling || enrollmentsLoading}
-                    className="px-6 py-2 h-auto text-base"
-                    size="lg"
+                  <a 
+                    href="#"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 text-base cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('Anchor clicked');
+                      if (!enrolling && !enrollmentsLoading) {
+                        handleEnroll();
+                      }
+                    }}
+                    style={{ pointerEvents: 'auto' }}
                   >
                     {enrolling ? (
                       <>
@@ -182,7 +202,7 @@ export function CourseClient({ course, lessons: initialLessons, courseId }: Cour
                         Yozilmoqda...
                       </>
                     ) : 'Kursga yozilish'}
-                  </Button>
+                  </a>
                 )}
               </div>
             </div>

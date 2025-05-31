@@ -1,4 +1,4 @@
-import { Quiz as QuizType, Question } from '@/lib/types';
+import type { Quiz as QuizType, QuizQuestion } from '@/lib/types';
 import { useQuiz } from '@/hooks/useQuiz';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,9 +16,10 @@ interface QuizProps {
   lessonId: string;
   quiz: QuizType;
   className?: string;
+  onQuizComplete?: (passed: boolean) => void;
 }
 
-export function Quiz({ courseId, lessonId, quiz, className }: QuizProps) {
+export function Quiz({ courseId, lessonId, quiz, className, onQuizComplete }: QuizProps) {
   const {
     currentQuestion,
     selectedAnswers,
@@ -33,7 +34,16 @@ export function Quiz({ courseId, lessonId, quiz, className }: QuizProps) {
     handlePreviousQuestion,
     handleSubmitQuiz,
     resetQuiz,
-  } = useQuiz({ courseId, lessonId, quiz });
+  } = useQuiz({
+    courseId,
+    lessonId,
+    quiz,
+    onQuizComplete: (passed) => {
+      if (onQuizComplete) {
+        onQuizComplete(passed);
+      }
+    }
+  });
 
   if (loading) {
     return (
@@ -77,8 +87,9 @@ export function Quiz({ courseId, lessonId, quiz, className }: QuizProps) {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const renderQuestion = (question: Question) => {
+  const renderQuestion = (question: QuizQuestion) => {
     switch (question.type) {
+      case 'single-choice':
       case 'multiple-choice':
         return (
           <RadioGroup
@@ -86,7 +97,7 @@ export function Quiz({ courseId, lessonId, quiz, className }: QuizProps) {
             onValueChange={(value) => handleAnswerSelect(question.id, value)}
           >
             <div className="space-y-3">
-              {question.options?.map((option, index) => (
+              {question.options?.map((option: string, index: number) => (
                 <div key={index} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={`option-${index}`} />
                   <Label htmlFor={`option-${index}`}>{option}</Label>
@@ -115,7 +126,7 @@ export function Quiz({ courseId, lessonId, quiz, className }: QuizProps) {
           </RadioGroup>
         );
 
-      case 'text':
+      case 'short-answer':
         return (
           <Input
             value={selectedAnswers[question.id]?.toString() || ''}
@@ -153,7 +164,7 @@ export function Quiz({ courseId, lessonId, quiz, className }: QuizProps) {
 
       <CardContent className="space-y-4">
         <div className="space-y-4">
-          <p className="font-medium">{currentQuestionData.question}</p>
+          <p className="font-medium">{currentQuestionData.questionText}</p>
           {renderQuestion(currentQuestionData)}
         </div>
 

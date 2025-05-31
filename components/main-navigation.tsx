@@ -8,7 +8,7 @@ import { Home, BookOpen, User, BarChart, Settings } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { isUserAdmin } from "@/utils/isAdmin"
 
-export function MobileNavigation() {
+export function MainNavigation() {
   const pathname = usePathname()
   const { user } = useAuth()
   const [isAdmin, setIsAdmin] = useState(false)
@@ -59,25 +59,25 @@ export function MobileNavigation() {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-10 bg-background border-t">
-      <nav className="flex justify-around">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center py-2 px-3 text-xs",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <item.icon className="w-5 h-5 mb-1" />
-              <span>{item.name}</span>
-            </Link>
-          )
-        })}
-      </nav>
-    </div>
+    <nav className="hidden md:flex items-center space-x-4">
+      {navItems.map((item) => {
+        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              isActive 
+                ? "bg-primary/10 text-primary" 
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            )}
+          >
+            <item.icon className="w-4 h-4 mr-2" />
+            <span>{item.name}</span>
+          </Link>
+        )
+      })}
+    </nav>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Quiz, Question, UserAnswer, QuizAttempt, ApiResponse } from '@/lib/types';
+import { Quiz, UserAnswer, QuizAttempt, ApiResponse, QuizQuestion } from '@/lib/types';
 import { ProgressService } from '@/lib/services/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from './useAuth';
@@ -8,6 +8,7 @@ interface UseQuizProps {
   courseId: string;
   lessonId: string;
   quiz: Quiz;
+  onQuizComplete?: (passed: boolean) => void;
 }
 
 interface UseQuizReturn {
@@ -26,7 +27,7 @@ interface UseQuizReturn {
   resetQuiz: () => void;
 }
 
-export function useQuiz({ courseId, lessonId, quiz }: UseQuizProps): UseQuizReturn {
+export function useQuiz({ courseId, lessonId, quiz, onQuizComplete }: UseQuizProps): UseQuizReturn {
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -122,11 +123,15 @@ export function useQuiz({ courseId, lessonId, quiz }: UseQuizProps): UseQuizRetu
       setIsSubmitting(true);
 
       // Format answers for submission
-      const answers: UserAnswer[] = quiz.questions.map(question => ({
-        questionId: question.id,
-        answer: selectedAnswers[question.id] || '',
-        isCorrect: false // Will be calculated server-side
-      }));
+      const answers: UserAnswer[] = quiz.questions.map(question => {
+        // Convert number answers to strings to match UserAnswer type
+        const answer = selectedAnswers[question.id] || '';
+        return {
+          questionId: question.id,
+          answer: typeof answer === 'number' ? String(answer) : answer,
+          isCorrect: false // Will be calculated server-side
+        };
+      });
 
       const timeTaken = Math.round((Date.now() - startTime) / 1000);
 
@@ -147,6 +152,11 @@ export function useQuiz({ courseId, lessonId, quiz }: UseQuizProps): UseQuizRetu
           description: response.message,
           variant: response.data.passed ? "default" : "destructive"
         });
+
+        // Call the onQuizComplete callback if provided
+        if (onQuizComplete && response.data.passed) {
+          onQuizComplete(response.data.passed);
+        }
 
         resetQuiz();
       } else {

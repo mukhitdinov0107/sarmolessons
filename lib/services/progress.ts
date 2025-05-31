@@ -175,7 +175,7 @@ export class ProgressService {
     userId: string,
     courseId: string,
     lessonId: string,
-    timeSpent: number,
+    timeSpent: number = 0,
     watchPercentage: number = 100,
     quizScore?: number
   ): Promise<ApiResponse<CourseProgress>> {
@@ -201,6 +201,42 @@ export class ProgressService {
           success: false,
           error: 'Kurs ma\'lumotlari topilmadi'
         };
+      }
+      
+      // Find the current lesson to check if it has a quiz
+      const currentLesson = course.lessons.find(lesson => lesson.id === lessonId);
+      if (!currentLesson) {
+        console.log('[ProgressService] Lesson not found in course');
+        return {
+          success: false,
+          error: 'Dars topilmadi'
+        };
+      }
+      
+      // If the lesson has a quiz, check if it has been passed
+      if (currentLesson.quiz) {
+        console.log('[ProgressService] Lesson has a quiz, checking if passed');
+        
+        // Get the existing lesson progress to check quiz status
+        const existingProgress = enrollment.progress.completedLessons.find(lp => lp.lessonId === lessonId);
+        
+        // Check if quiz has been passed
+        const quizPassed = (
+          (existingProgress?.quizScore && existingProgress.quizScore >= (currentLesson.quiz.passingScore || 70)) ||
+          (existingProgress?.quizAttempts && existingProgress.quizAttempts.some(attempt => attempt.passed))
+        );
+        
+        if (!quizPassed && quizScore === undefined) {
+          console.log('[ProgressService] Quiz not passed, cannot complete lesson');
+          return {
+            success: false,
+            error: 'Darsni tugatish uchun testni muvaffaqiyatli topshirishingiz kerak'
+          };
+        }
+        
+        console.log('[ProgressService] Quiz passed or score provided, proceeding with lesson completion');
+      } else {
+        console.log('[ProgressService] Lesson does not have a quiz, proceeding with completion');
       }
       const totalLessonsInCourse = course.lessons.length;
       console.log('[ProgressService] Total lessons in course:', totalLessonsInCourse);
@@ -262,32 +298,36 @@ export class ProgressService {
         const status = progressPercentage >= 100 ? 'completed' : 'active';
         console.log('[ProgressService] New enrollment status:', status);
         
-        // Create the updated progress object
+        // Create the updated progress object with safe defaults for all values
         const updatedProgress: CourseProgress = {
           completedLessons,
           progressPercentage,
-          totalTimeSpent: (currentData.progress.totalTimeSpent || 0) + timeSpent,
+          totalTimeSpent: (currentData.progress?.totalTimeSpent || 0) + (timeSpent || 0),
           lastAccessedAt: Timestamp.fromDate(new Date()),
-          currentLessonId: lessonId
+          currentLessonId: lessonId || ''
         };
         
-        // Create the updated document data
+        // Create the updated document data with safe values
         const updatedData = {
-          status,
+          status: status || 'active',
           updatedAt: serverTimestamp(),
           progress: updatedProgress
         };
         
         console.log('[ProgressService] Setting updated document');
         
+        // Make sure we're not sending any undefined values
+        const sanitizedData = JSON.parse(JSON.stringify(updatedData));
+        console.log('[ProgressService] Sanitized data for update:', sanitizedData);
+        
         // Update the document with merge option
-        await setDoc(enrollmentRef, updatedData, { merge: true });
+        await setDoc(enrollmentRef, sanitizedData, { merge: true });
         
         console.log('[ProgressService] Document updated successfully');
         
-        // Update user stats
+        // Update user stats with safe values
         await AuthService.updateUserStats(userId, {
-          totalLearningTime: increment(timeSpent) as unknown as number,
+          totalLearningTime: increment(timeSpent || 0) as unknown as number,
           completedLessons: increment(1) as unknown as number,
           lastActiveDate: serverTimestamp() as Timestamp
         });
@@ -579,8 +619,8 @@ export class ProgressService {
     userId: string,
     courseId: string,
     lessonId: string,
-    timeSpent: number, // in seconds for this session
-    isCompleted: boolean,
+    timeSpent: number = 0, // in seconds for this session
+    isCompleted: boolean = false,
     watchPercentage?: number // Optional: current watch percentage
   ): Promise<void> {
     try {
@@ -603,10 +643,10 @@ export class ProgressService {
       // Ensure progress and completedLessons are initialized
       const progress = enrollment.progress || {
         completedLessons: [],
-        currentLessonId: lessonId,
+        currentLessonId: lessonId || '',
         progressPercentage: 0,
         totalTimeSpent: 0,
-        lastAccessedAt: serverTimestamp() as Timestamp,
+        lastAccessedAt: Timestamp.fromDate(new Date()), // Use concrete timestamp instead of serverTimestamp
       };
       
       progress.completedLessons = progress.completedLessons || [];
@@ -616,12 +656,12 @@ export class ProgressService {
 
       if (lessonProgress) {
         // Update existing lesson progress
-        lessonProgress.timeSpent = (lessonProgress.timeSpent || 0) + timeSpent;
+        lessonProgress.timeSpent = (lessonProgress.timeSpent || 0) + (timeSpent || 0);
         if (watchPercentage !== undefined) {
           lessonProgress.watchPercentage = Math.max(lessonProgress.watchPercentage || 0, watchPercentage);
         }
         if (isCompleted && !lessonProgress.completedAt) {
-          lessonProgress.completedAt = serverTimestamp() as Timestamp;
+          lessonProgress.completedAt = Timestamp.fromDate(new Date()); // Use concrete timestamp
           lessonProgress.attempts = (lessonProgress.attempts || 0) + 1;
         }
         // Replace the old lesson progress with the updated one
@@ -631,11 +671,12 @@ export class ProgressService {
       } else {
         // Create new lesson progress
         lessonProgress = {
-          lessonId,
-          timeSpent,
-          watchPercentage: watchPercentage || (isCompleted ? 100 : 0),
+          lessonId: lessonId || '',
+          timeSpent: timeSpent || 0,
+          watchPercentage: watchPercentage !== undefined ? watchPercentage : (isCompleted ? 100 : 0),
           attempts: isCompleted ? 1 : 0,
-          completedAt: isCompleted ? (serverTimestamp() as Timestamp) : undefined,
+          // Use concrete timestamp and only include completedAt if isCompleted is true
+          ...(isCompleted ? { completedAt: Timestamp.fromDate(new Date()) } : {}),
         };
         updatedCompletedLessons.push(lessonProgress);
       }
@@ -654,13 +695,13 @@ export class ProgressService {
         progress: {
           ...progress, // spread existing progress fields
           completedLessons: updatedCompletedLessons,
-          totalTimeSpent: increment(timeSpent) as unknown as number, // Firestore increment
-          lastAccessedAt: serverTimestamp() as Timestamp,
-          currentLessonId: lessonId,
-          progressPercentage: progressPercentage,
+          totalTimeSpent: increment(timeSpent || 0) as unknown as number, // Firestore increment with safe value
+          lastAccessedAt: Timestamp.fromDate(new Date()), // Use concrete timestamp
+          currentLessonId: lessonId || '',
+          progressPercentage: progressPercentage || 0,
         },
-        lastAccessedAt: serverTimestamp() as Timestamp,
-        updatedAt: serverTimestamp() as Timestamp,
+        lastAccessedAt: Timestamp.fromDate(new Date()), // Use concrete timestamp
+        updatedAt: Timestamp.fromDate(new Date()), // Use concrete timestamp
       };
       
       if (progressPercentage === 100 && enrollment.status !== 'completed') {
@@ -671,12 +712,17 @@ export class ProgressService {
          });
       }
 
-      await updateDoc(enrollmentDocRef, updateData);
+      // Sanitize the data to remove any undefined values
+      const sanitizedData = JSON.parse(JSON.stringify(updateData));
+      console.log('[ProgressService] Sanitized update data:', sanitizedData);
       
-      // Update user's general stats
+      // Update the document
+      await updateDoc(enrollmentDocRef, sanitizedData);
+      
+      // Update user's general stats with safe values
       await AuthService.updateUserStats(userId, {
-        totalLearningTime: increment(timeSpent) as unknown as number,
-        lastActiveDate: serverTimestamp() as Timestamp,
+        totalLearningTime: increment(timeSpent || 0) as unknown as number,
+        lastActiveDate: Timestamp.fromDate(new Date()), // Use concrete timestamp
         ...(isCompleted && !progress.completedLessons.find(lp => lp.lessonId === lessonId)?.completedAt 
             ? { completedLessons: increment(1) as unknown as number } 
             : {})
