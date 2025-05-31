@@ -50,10 +50,11 @@ export default function LessonPage({}: LessonPageProps) {
   }, [courseId, lessonId])
 
   useEffect(() => {
-    if (!courseId || !lessonId) return
+    if (!courseId || !lessonId || !user) return
     
     let isMounted = true
     let progressInterval: NodeJS.Timeout | null = null
+    let lastProgressUpdate = Date.now()
     
     const fetchData = async () => {
       try {
@@ -74,23 +75,21 @@ export default function LessonPage({}: LessonPageProps) {
             lessons: Array.isArray(data.data.allLessons) ? data.data.allLessons : []
           })
           
-          // Start tracking progress if user is logged in
-          if (user) {
-            try {
-              await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+          // Initialize progress
+          await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
               
-              // Start periodic progress updates
-              progressInterval = setInterval(async () => {
-                try {
-                  await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 1, false)
-                } catch (err) {
-                  console.error('Error updating progress:', err)
-                }
-              }, 60000) // Update every minute
-            } catch (err) {
-              console.error('Error initializing progress:', err)
+          // Update progress every 2 minutes, but only if there's been activity
+          progressInterval = setInterval(async () => {
+            const now = Date.now()
+            if (now - lastProgressUpdate >= 120000) { // 2 minutes
+              try {
+                await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 1, false)
+                lastProgressUpdate = now
+              } catch (err) {
+                console.error('Error updating progress:', err)
+              }
             }
-          }
+          }, 120000) // Check every 2 minutes
         }
       } catch (err: any) {
         console.error('Error fetching lesson:', err)
@@ -133,9 +132,16 @@ export default function LessonPage({}: LessonPageProps) {
     return (
       <div className="container py-8">
         <div className="space-y-8">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-[400px]" />
-          <Skeleton className="h-32" />
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <div>
+            <Skeleton className="h-8 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+          <Skeleton className="h-[400px] w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
       </div>
     )
@@ -146,13 +152,19 @@ export default function LessonPage({}: LessonPageProps) {
       <div className="container py-8">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center text-destructive">
-              <p>{error || 'Dars topilmadi'}</p>
-              <Link href={`/courses/${courseId}`}>
-                <Button variant="outline" className="mt-4">
+            <div className="text-center space-y-4">
+              <div className="text-destructive space-y-2">
+                <h2 className="text-lg font-semibold">Xatolik yuz berdi</h2>
+                <p>{error || 'Dars topilmadi'}</p>
+              </div>
+              <div className="flex justify-center space-x-4">
+                <Button variant="outline" onClick={() => router.push(`/courses/${courseId}`)}>
                   Kursga qaytish
                 </Button>
-              </Link>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Qayta yuklash
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -190,19 +202,16 @@ export default function LessonPage({}: LessonPageProps) {
         </div>
 
         {lesson.videoUrl && (
-          <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
-            {lesson.videoUrl ? (
+          <Card>
+            <CardContent className="p-0 aspect-video">
               <VideoPlayer 
                 videoUrl={lesson.videoUrl} 
                 title={lesson.title}
                 onProgressUpdate={handleVideoProgress}
+                className="w-full h-full"
               />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-muted">
-                <p className="text-muted-foreground">Video mavjud emas</p>
-              </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {lesson.content && (
@@ -214,53 +223,111 @@ export default function LessonPage({}: LessonPageProps) {
         )}
 
         {lesson.attachments && lesson.attachments.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="font-medium">Yuklab olish uchun fayllar</h3>
-            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {lesson.attachments.map((attachment: Attachment) => (
-                <a
-                  key={attachment.id}
-                  href={attachment.url}
-                  download
-                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <AttachmentIcon type={attachment.type} className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{attachment.name}</span>
-                  <Download className="h-4 w-4 ml-auto text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </div>
+          <Card>
+            <CardContent className="py-6">
+              <h3 className="text-lg font-semibold mb-4">Qo'shimcha materiallar</h3>
+              <div className="space-y-4">
+                {lesson.attachments.map((attachment: Attachment) => (
+                  <div key={attachment.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <AttachmentIcon type={attachment.type} className="w-8 h-8 mr-3" />
+                      <div>
+                        <p className="font-medium">{attachment.name}</p>
+                        <p className="text-sm text-muted-foreground">{attachment.description}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={attachment.url} download>
+                        <Download className="w-4 h-4 mr-2" />
+                        Yuklab olish
+                      </a>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {lesson.links && lesson.links.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="font-medium">Foydali havolalar</h3>
-            <div className="space-y-2">
-              {lesson.links.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+          <Card>
+            <CardContent className="py-6">
+              <h3 className="text-lg font-semibold mb-4">Foydali havolalar</h3>
+              <div className="space-y-4">
+                {lesson.links.map((link) => (
+                  <div key={link.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{link.title}</p>
+                      <p className="text-sm text-muted-foreground">{link.description}</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={link.url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Ochish
+                      </a>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isCompleted && (
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">Darsni tugatish</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Darsni tugatish uchun videoni oxirigacha ko'ring yoki tugmani bosing
+                  </p>
+                </div>
+                <Button 
+                  onClick={async () => {
+                    if (!user?.uid) return
+                    try {
+                      await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 100, true)
+                      setIsCompleted(true)
+                      if (lesson?.quiz) {
+                        setShowQuiz(true)
+                      }
+                      toast.success("Dars muvaffaqiyatli tugatildi!")
+                    } catch (err) {
+                      console.error('Error marking lesson as completed:', err)
+                      toast.error("Xatolik yuz berdi")
+                    }
+                  }}
+                  disabled={loading}
                 >
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{link.title || 'Havola'}</span>
-                </a>
-              ))}
-            </div>
-          </div>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Yuklanmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Darsni tugatish
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Progress value={videoProgress} className="mt-4" />
+            </CardContent>
+          </Card>
         )}
 
         {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
-          <div className="mt-8">
-            <Quiz
-              courseId={courseId}
-              lessonId={lessonId}
-              quiz={lesson.quiz}
-            />
-          </div>
+          <Card>
+            <CardContent className="py-6">
+              <Quiz
+                courseId={courseId}
+                lessonId={lessonId}
+                quiz={lesson.quiz}
+              />
+            </CardContent>
+          </Card>
         )}
 
         <div className="flex justify-between mt-8">

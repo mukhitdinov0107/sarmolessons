@@ -26,17 +26,22 @@ export const storage: FirebaseStorage = getStorage(app);
 // Set custom auth domain if provided
 const customDomain = typeof window !== 'undefined' ? window.location.hostname : '';
 if (customDomain && customDomain !== 'localhost') {
-  auth.config.authDomain = customDomain;
+  // Only override auth domain for production domains
+  if (customDomain === 'sarmolessons-production.up.railway.app' || 
+      customDomain === firebaseConfig.authDomain) {
+    auth.config.authDomain = firebaseConfig.authDomain; // Always use Firebase auth domain for auth operations
+  }
 }
 
 // Initialize Analytics (client-side only)
 let analytics: Analytics | null = null;
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
   analytics = getAnalytics(app);
 }
 
 // Use emulator in development
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && 
+    window.location.hostname === 'localhost') {
   connectAuthEmulator(auth, 'http://localhost:9099');
   connectFirestoreEmulator(db, 'localhost', 8080);
   connectStorageEmulator(storage, 'localhost', 9199);
