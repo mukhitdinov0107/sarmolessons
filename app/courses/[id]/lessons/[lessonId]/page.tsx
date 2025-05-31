@@ -179,175 +179,211 @@ export default function LessonPage({}: LessonPageProps) {
     : null
 
   return (
-    <div className="container py-8">
+    <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-3">
             <Link
               href={`/courses/${courseId}`}
-              className="text-sm text-muted-foreground hover:text-foreground mb-2 flex items-center"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <ArrowLeft className="w-4 h-4 mr-2" />
               {course.title}
             </Link>
-            <h1 className="text-2xl font-bold">{lesson.title}</h1>
-            <p className="text-muted-foreground mt-1">{lesson.description}</p>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{lesson.title}</h1>
+              <p className="text-muted-foreground mt-2 text-sm sm:text-base">{lesson.description}</p>
+            </div>
           </div>
           {isCompleted && (
-            <div className="flex items-center text-green-500">
+            <div className="flex items-center px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg">
               <CheckCircle className="w-5 h-5 mr-2" />
-              <span>Tugatildi</span>
+              <span className="font-medium">Tugatildi</span>
             </div>
           )}
         </div>
 
-        {lesson.videoUrl && (
-          <Card>
-            <CardContent className="p-0 aspect-video">
-              <VideoPlayer 
-                videoUrl={lesson.videoUrl} 
-                title={lesson.title}
-                onProgressUpdate={handleVideoProgress}
-                className="w-full h-full"
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {lesson.content && (
-          <Card>
-            <CardContent className="prose prose-slate dark:prose-invert max-w-none py-6">
-              <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
-            </CardContent>
-          </Card>
-        )}
-
-        {lesson.attachments && lesson.attachments.length > 0 && (
-          <Card>
-            <CardContent className="py-6">
-              <h3 className="text-lg font-semibold mb-4">Qo'shimcha materiallar</h3>
-              <div className="space-y-4">
-                {lesson.attachments.map((attachment: Attachment) => (
-                  <div key={attachment.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <AttachmentIcon type={attachment.type} className="w-8 h-8 mr-3" />
-                      <div>
-                        <p className="font-medium">{attachment.name}</p>
-                        <p className="text-sm text-muted-foreground">{attachment.description}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={attachment.url} download>
-                        <Download className="w-4 h-4 mr-2" />
-                        Yuklab olish
-                      </a>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {lesson.links && lesson.links.length > 0 && (
-          <Card>
-            <CardContent className="py-6">
-              <h3 className="text-lg font-semibold mb-4">Foydali havolalar</h3>
-              <div className="space-y-4">
-                {lesson.links.map((link) => (
-                  <div key={link.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{link.title}</p>
-                      <p className="text-sm text-muted-foreground">{link.description}</p>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={link.url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Ochish
-                      </a>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!isCompleted && (
-          <Card>
-            <CardContent className="py-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold">Darsni tugatish</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Darsni tugatish uchun videoni oxirigacha ko'ring yoki tugmani bosing
-                  </p>
+        {/* Main Content */}
+        <div className="grid gap-8">
+          {/* Video Section */}
+          {lesson.videoUrl && (
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="aspect-video">
+                  <VideoPlayer 
+                    videoUrl={lesson.videoUrl} 
+                    title={lesson.title}
+                    onProgressUpdate={handleVideoProgress}
+                    className="w-full h-full"
+                  />
                 </div>
-                <Button 
-                  onClick={async () => {
-                    if (!user?.uid) return
-                    try {
-                      await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 100, true)
-                      setIsCompleted(true)
-                      if (lesson?.quiz) {
-                        setShowQuiz(true)
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Content Section */}
+          {lesson.content && (
+            <Card>
+              <CardContent className="prose prose-slate dark:prose-invert max-w-none py-8">
+                <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Progress Section */}
+          {!isCompleted && (
+            <Card>
+              <CardContent className="py-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-semibold">Darsni tugatish</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Darsni tugatish uchun videoni oxirigacha ko'ring yoki tugmani bosing
+                    </p>
+                  </div>
+                  <Button 
+                    size="lg"
+                    onClick={async () => {
+                      if (!user?.uid) return
+                      try {
+                        await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 100, true)
+                        setIsCompleted(true)
+                        if (lesson?.quiz) {
+                          setShowQuiz(true)
+                        }
+                        toast.success("Dars muvaffaqiyatli tugatildi!")
+                      } catch (err) {
+                        console.error('Error marking lesson as completed:', err)
+                        toast.error("Xatolik yuz berdi")
                       }
-                      toast.success("Dars muvaffaqiyatli tugatildi!")
-                    } catch (err) {
-                      console.error('Error marking lesson as completed:', err)
-                      toast.error("Xatolik yuz berdi")
-                    }
-                  }}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Yuklanmoqda...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Darsni tugatish
-                    </>
-                  )}
-                </Button>
-              </div>
-              <Progress value={videoProgress} className="mt-4" />
-            </CardContent>
-          </Card>
-        )}
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Yuklanmoqda...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Darsni tugatish
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <Progress value={videoProgress} className="mt-6" />
+              </CardContent>
+            </Card>
+          )}
 
-        {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
-          <Card>
-            <CardContent className="py-6">
-              <Quiz
-                courseId={courseId}
-                lessonId={lessonId}
-                quiz={lesson.quiz}
-              />
-            </CardContent>
-          </Card>
-        )}
+          {/* Resources Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Attachments Section */}
+            {lesson.attachments && lesson.attachments.length > 0 && (
+              <Card>
+                <CardContent className="py-6">
+                  <h3 className="text-lg font-semibold mb-4">Qo'shimcha materiallar</h3>
+                  <div className="space-y-3">
+                    {lesson.attachments.map((attachment: Attachment) => (
+                      <div 
+                        key={attachment.id} 
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <AttachmentIcon type={attachment.type} className="w-8 h-8 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{attachment.name}</p>
+                            {attachment.description && (
+                              <p className="text-sm text-muted-foreground">{attachment.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={attachment.url} download className="flex items-center">
+                            <Download className="w-4 h-4 mr-1" />
+                            <span className="sr-only">Yuklab olish</span>
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        <div className="flex justify-between mt-8">
-          <Button 
-            variant="outline" 
-            onClick={() => previousLesson && router.push(`/courses/${courseId}/lessons/${previousLesson.id}`)} 
-            disabled={!previousLesson}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Oldingi dars
-          </Button>
-          <Button 
-            onClick={() => nextLesson 
-              ? router.push(`/courses/${courseId}/lessons/${nextLesson.id}`)
-              : router.push(`/courses/${courseId}`)
-            }
-          >
-            {nextLesson ? 'Keyingi dars' : 'Kursni tugatish'}
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+            {/* Links Section */}
+            {lesson.links && lesson.links.length > 0 && (
+              <Card>
+                <CardContent className="py-6">
+                  <h3 className="text-lg font-semibold mb-4">Foydali havolalar</h3>
+                  <div className="space-y-3">
+                    {lesson.links.map((link) => (
+                      <div 
+                        key={link.id} 
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-accent/50 transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium">{link.title}</p>
+                          {link.description && (
+                            <p className="text-sm text-muted-foreground">{link.description}</p>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a 
+                            href={link.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            <span className="sr-only">Ochish</span>
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Quiz Section */}
+          {lesson.quiz && (showQuiz || !lesson.videoUrl) && (
+            <Card>
+              <CardContent className="py-8">
+                <Quiz
+                  courseId={courseId}
+                  lessonId={lessonId}
+                  quiz={lesson.quiz}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => previousLesson && router.push(`/courses/${courseId}/lessons/${previousLesson.id}`)} 
+              disabled={!previousLesson}
+              className="min-w-[120px]"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Oldingi dars
+            </Button>
+            <Button 
+              onClick={() => nextLesson 
+                ? router.push(`/courses/${courseId}/lessons/${nextLesson.id}`)
+                : router.push(`/courses/${courseId}`)
+              }
+              className="min-w-[120px]"
+            >
+              {nextLesson ? 'Keyingi dars' : 'Kursni tugatish'}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
