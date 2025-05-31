@@ -75,8 +75,16 @@ export default function LessonPage({}: LessonPageProps) {
             lessons: Array.isArray(data.data.allLessons) ? data.data.allLessons : []
           })
           
-          // Initialize progress
-          await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+          // Check if the lesson is already completed
+          const lessonProgress = await ProgressService.getLessonProgress(user.uid, courseId, lessonId)
+          if (lessonProgress && lessonProgress.completedAt) {
+            setIsCompleted(true)
+            setVideoProgress(100)
+            console.log('[LessonPage] Lesson already completed:', lessonId)
+          } else {
+            // Initialize progress if not completed
+            await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, false)
+          }
               
           // Update progress every 2 minutes, but only if there's been activity
           progressInterval = setInterval(async () => {
@@ -117,13 +125,15 @@ export default function LessonPage({}: LessonPageProps) {
     setVideoProgress(progress)
     if (progress >= 90 && !isCompleted && user?.uid) {
       try {
-        await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 0, true)
+        await ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
         setIsCompleted(true)
         if (lesson?.quiz) {
           setShowQuiz(true)
         }
+        toast.success("Dars muvaffaqiyatli tugatildi!")
       } catch (err) {
         console.error('Error marking lesson as completed:', err)
+        toast.error("Darsni tugatishda xatolik yuz berdi")
       }
     }
   }
@@ -247,7 +257,7 @@ export default function LessonPage({}: LessonPageProps) {
                     onClick={async () => {
                       if (!user?.uid) return
                       try {
-                        await ProgressService.updateLessonProgress(user.uid, courseId, lessonId, 100, true)
+                        await ProgressService.completeLessonAndUpdateProgress(user.uid, courseId, lessonId, 5, 100)
                         setIsCompleted(true)
                         if (lesson?.quiz) {
                           setShowQuiz(true)
