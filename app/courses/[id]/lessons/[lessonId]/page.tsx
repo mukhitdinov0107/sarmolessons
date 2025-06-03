@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { useParams, useRouter } from 'next/navigation'
 import { Skeleton } from "@/components/ui/skeleton"
-import { Quiz } from "@/components/quiz"
+import { Quiz } from "@/components/Quiz"
 import { generateQuizForLesson } from '@/utils/mockQuizData'
 
 interface Link {
