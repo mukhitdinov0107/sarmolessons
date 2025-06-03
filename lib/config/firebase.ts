@@ -71,68 +71,79 @@ let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 let analytics: Analytics | undefined;
 
-try {
-  const firebaseConfig = getFirebaseConfig();
-  
-  // Check if Firebase is already initialized
-  const existingApps = getApps();
-  console.log('Existing Firebase apps:', existingApps.length);
+const initializeFirebase = async () => {
+  try {
+    const firebaseConfig = getFirebaseConfig();
+    
+    // Check if Firebase is already initialized
+    const existingApps = getApps();
+    console.log('Existing Firebase apps:', existingApps.length);
 
-  // Initialize Firebase
-  app = existingApps.length === 0 ? initializeApp(firebaseConfig) : existingApps[0];
-  console.log('Firebase app initialized:', !!app);
-  
-  // Initialize services
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
+    // Initialize Firebase
+    app = existingApps.length === 0 ? initializeApp(firebaseConfig) : existingApps[0];
+    console.log('Firebase app initialized:', !!app);
+    
+    // Initialize Auth first
+    auth = getAuth(app);
+    console.log('Firebase Auth initialized:', !!auth);
 
-  // Enable offline persistence for Firestore
-  if (typeof window !== 'undefined') {
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-      } else if (err.code === 'unimplemented') {
-        console.warn('The current browser doesn\'t support persistence.');
-      }
+    // Wait for initial auth state
+    await new Promise<void>((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth!, () => {
+        unsubscribe();
+        resolve();
+      });
     });
-  }
 
-  console.log('Firebase services initialized:', {
-    auth: !!auth,
-    db: !!db,
-    storage: !!storage
-  });
+    // Initialize other services
+    db = getFirestore(app);
+    storage = getStorage(app);
 
-  // Initialize Analytics only in browser environment
-  if (typeof window !== 'undefined') {
-    isSupported().then(supported => {
-      if (supported) {
+    // Enable offline persistence for Firestore
+    if (typeof window !== 'undefined') {
+      try {
+        await enableIndexedDbPersistence(db);
+        console.log('Firestore persistence enabled');
+      } catch (err: any) {
+        if (err.code === 'failed-precondition') {
+          console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+        } else if (err.code === 'unimplemented') {
+          console.warn('The current browser doesn\'t support persistence.');
+        }
+      }
+    }
+
+    console.log('Firebase services initialized:', {
+      auth: !!auth,
+      db: !!db,
+      storage: !!storage
+    });
+
+    // Initialize Analytics only in browser environment
+    if (typeof window !== 'undefined') {
+      const analyticsSupported = await isSupported();
+      if (analyticsSupported) {
         analytics = getAnalytics(app);
         console.log('Firebase Analytics initialized:', !!analytics);
       }
-    }).catch((error) => {
-      console.warn('Firebase Analytics initialization failed:', error);
-    });
+    }
 
-    // Set up auth state listener
-    if (auth) {
-      onAuthStateChanged(auth, (user) => {
-        console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
+    console.log('Firebase initialization completed successfully');
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
       });
     }
   }
+};
 
-  console.log('Firebase initialization completed successfully');
-} catch (error) {
-  console.error('Firebase initialization error:', error);
-  if (error instanceof Error) {
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-  }
+// Initialize Firebase
+if (typeof window !== 'undefined') {
+  initializeFirebase();
 }
 
 export { app, auth, db, storage, analytics }; 

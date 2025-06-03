@@ -23,6 +23,8 @@ import { User, UserPreferences, UserStats, ApiResponse } from "@/lib/types";
 import { sessionManager, userPreferences } from "@/lib/utils/cookies";
 
 export class AuthService {
+  private static currentUser: User | null = null;
+
   // Helper method to check if we're in a browser environment
   private static isBrowser() {
     return typeof window !== 'undefined';
@@ -52,8 +54,20 @@ export class AuthService {
         throw new Error('Database not available');
       }
 
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.uid));
+      // First check if we already have the user data cached
+      if (this.currentUser && this.currentUser.uid === firebaseUser.uid) {
+        return this.currentUser;
+      }
+
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const adminDocRef = doc(db, 'admins', firebaseUser.uid);
+
+      // Get both documents in parallel
+      const [userDoc, adminDoc] = await Promise.all([
+        getDoc(userDocRef),
+        getDoc(adminDocRef)
+      ]);
+
       const userData = userDoc.data();
       const isAdmin = adminDoc.exists();
 
@@ -99,12 +113,13 @@ export class AuthService {
         };
 
         // Store the basic profile
-        await setDoc(doc(db, 'users', firebaseUser.uid), basicUser);
+        await setDoc(userDocRef, basicUser);
+        this.currentUser = basicUser;
         return basicUser;
       }
 
-      // Return existing user data
-      return {
+      // Create user object from existing data
+      const user: User = {
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         firstName: userData.firstName || '',
@@ -127,6 +142,10 @@ export class AuthService {
         createdAt: userData.createdAt || new Date().toISOString(),
         updatedAt: userData.updatedAt || new Date().toISOString()
       };
+
+      // Cache the user data
+      this.currentUser = user;
+      return user;
     } catch (error) {
       console.error('Error getting user data:', error);
       throw error;
@@ -266,7 +285,7 @@ export class AuthService {
     }
   }
 
-  // Listen to auth state changes
+  // Auth state change handler
   static onAuthStateChange(callback: (user: User | null) => void) {
     const auth = this.getAuth();
     if (!auth) {
@@ -280,10 +299,12 @@ export class AuthService {
           const user = await this.getUserData(firebaseUser);
           callback(user);
         } else {
+          this.currentUser = null;
           callback(null);
         }
       } catch (error) {
         console.error('Error in auth state change:', error);
+        this.currentUser = null;
         callback(null);
       }
     });
