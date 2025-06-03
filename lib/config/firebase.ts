@@ -1,6 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAuth, type Auth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, type Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics';
 
@@ -86,6 +86,18 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+
+  // Enable offline persistence for Firestore
+  if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+      } else if (err.code === 'unimplemented') {
+        console.warn('The current browser doesn\'t support persistence.');
+      }
+    });
+  }
+
   console.log('Firebase services initialized:', {
     auth: !!auth,
     db: !!db,
@@ -102,12 +114,18 @@ try {
     }).catch((error) => {
       console.warn('Firebase Analytics initialization failed:', error);
     });
+
+    // Set up auth state listener
+    if (auth) {
+      onAuthStateChanged(auth, (user) => {
+        console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
+      });
+    }
   }
 
   console.log('Firebase initialization completed successfully');
 } catch (error) {
   console.error('Firebase initialization error:', error);
-  // Log additional details for debugging
   if (error instanceof Error) {
     console.error('Error details:', {
       message: error.message,
