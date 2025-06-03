@@ -10,6 +10,8 @@ const nextConfig = {
     unoptimized: true,
   },
   output: 'standalone',
+  // Add Railway URL to allowed domains
+  assetPrefix: process.env.RAILWAY_STATIC_URL || '',
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
