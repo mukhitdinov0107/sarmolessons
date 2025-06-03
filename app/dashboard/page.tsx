@@ -14,6 +14,83 @@ import { useDashboard } from "@/hooks/useDashboard"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 
+// Loading state component
+const LoadingState = () => (
+  <main className="min-h-screen flex flex-col">
+    <div className="flex-1 container px-4 py-8 pb-20">
+      <div className="mb-6">
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+
+      <div className="mb-8">
+        <Skeleton className="h-6 w-40 mb-4" />
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="w-16 h-16 rounded-md" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-48 mb-2" />
+                    <Skeleton className="h-3 w-32 mb-2" />
+                    <Skeleton className="h-2 w-full mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <Skeleton className="h-6 w-32 mb-4" />
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-4">
+              <Skeleton className="w-12 h-12 rounded-full mx-auto mb-2" />
+              <Skeleton className="h-4 w-20 mx-auto mb-1" />
+              <Skeleton className="h-3 w-16 mx-auto" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+    <MobileNavigation />
+  </main>
+);
+
+// Unauthenticated state component
+const UnauthenticatedState = () => (
+  <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted">
+    <div className="w-full max-w-md px-4 py-8 text-center">
+      <div className="mb-6">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <LogIn className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">SarmoTraining ga xush kelibsiz!</h1>
+        <p className="text-muted-foreground mb-6">
+          O'zbek tilidagi AI kurslarini o'rganish uchun tizimga kiring
+        </p>
+      </div>
+      
+      <div className="space-y-4">
+        <Button asChild className="w-full" size="lg">
+          <Link href="/login">
+            Tizimga kirish
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="w-full" size="lg">
+          <Link href="/register">
+            Ro'yxatdan o'tish
+          </Link>
+        </Button>
+      </div>
+    </div>
+  </main>
+);
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -28,12 +105,18 @@ export default function DashboardPage() {
     refreshDashboard
   } = useDashboard()
 
+  // Handle hydration
+  const [isClient, setIsClient] = useState(false)
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && isClient) {
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [user, loading, router, isClient])
 
   const handleCourseClick = (courseId: string) => {
     updateLastVisitedCourse(courseId)
@@ -51,83 +134,17 @@ export default function DashboardPage() {
     return `${hours}s ${remainingMinutes}d`
   }
 
+  // Handle server-side rendering
+  if (!isClient) {
+    return <LoadingState />
+  }
+
   if (loading) {
-    return (
-      <main className="min-h-screen flex flex-col">
-        <div className="flex-1 container px-4 py-8 pb-20">
-          <div className="mb-6">
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-
-          <div className="mb-8">
-            <Skeleton className="h-6 w-40 mb-4" />
-            <div className="space-y-4">
-              {[1, 2].map((i) => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Skeleton className="w-16 h-16 rounded-md" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-48 mb-2" />
-                        <Skeleton className="h-3 w-32 mb-2" />
-                        <Skeleton className="h-2 w-full mb-2" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="p-4">
-                  <Skeleton className="w-12 h-12 rounded-full mx-auto mb-2" />
-                  <Skeleton className="h-4 w-20 mx-auto mb-1" />
-                  <Skeleton className="h-3 w-16 mx-auto" />
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-        <MobileNavigation />
-      </main>
-    )
+    return <LoadingState />
   }
 
   if (!user) {
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted">
-        <div className="w-full max-w-md px-4 py-8 text-center">
-          <div className="mb-6">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <LogIn className="w-8 h-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold mb-2">SarmoTraining ga xush kelibsiz!</h1>
-            <p className="text-muted-foreground mb-6">
-              O'zbek tilidagi AI kurslarini o'rganish uchun tizimga kiring
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <Button asChild className="w-full" size="lg">
-              <Link href="/login">
-                Tizimga kirish
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full" size="lg">
-              <Link href="/register">
-                Ro'yxatdan o'tish
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </main>
-    )
+    return <UnauthenticatedState />
   }
 
   return (

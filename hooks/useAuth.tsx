@@ -21,22 +21,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  // Handle hydration
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
+    if (!isClient) {
+      return;
+    }
+
     const unsubscribe = AuthService.onAuthStateChange((user) => {
       setUser(user);
       setLoading(false);
     });
 
-    return unsubscribe;
-  }, []);
+    return () => {
+      unsubscribe();
+    };
+  }, [isClient]);
 
   const signIn = async (email: string, password: string) => {
-    const result = await AuthService.signIn(email, password);
-    if (result.success && result.data) {
-      setUser(result.data);
+    try {
+      const result = await AuthService.signIn(email, password);
+      if (result.success && result.data) {
+        setUser(result.data);
+      }
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sign in'
+      };
     }
-    return result;
   };
 
   const signUp = async (
@@ -46,48 +65,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastName: string, 
     telegramUsername?: string
   ) => {
-    const result = await AuthService.register(email, password, firstName, lastName, telegramUsername);
-    if (result.success && result.data) {
-      setUser(result.data);
+    try {
+      const result = await AuthService.register(email, password, firstName, lastName, telegramUsername);
+      if (result.success && result.data) {
+        setUser(result.data);
+      }
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sign up'
+      };
     }
-    return result;
   };
 
   const signOut = async () => {
-    const result = await AuthService.signOut();
-    if (result.success) {
-      setUser(null);
+    try {
+      const result = await AuthService.signOut();
+      if (result.success) {
+        setUser(null);
+      }
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sign out'
+      };
     }
-    return result;
   };
 
   const updateProfile = async (updates: Partial<Pick<User, 'firstName' | 'lastName' | 'telegramUsername' | 'photoURL'>>) => {
-    const result = await AuthService.updateProfile(updates);
-    if (result.success && result.data) {
-      setUser(result.data);
+    try {
+      const result = await AuthService.updateProfile(updates);
+      if (result.success && result.data) {
+        setUser(result.data);
+      }
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to update profile'
+      };
     }
-    return result;
   };
 
   const updatePreferences = async (preferences: Partial<User['preferences']>) => {
-    const result = await AuthService.updatePreferences(preferences);
-    if (result.success && result.data) {
-      setUser(result.data);
+    try {
+      const result = await AuthService.updatePreferences(preferences);
+      if (result.success && result.data) {
+        setUser(result.data);
+      }
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to update preferences'
+      };
     }
-    return result;
   };
 
   const resetPassword = async (email: string) => {
-    return await AuthService.resetPassword(email);
+    try {
+      return await AuthService.resetPassword(email);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to reset password'
+      };
+    }
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
-    return await AuthService.changePassword(currentPassword, newPassword);
+    try {
+      return await AuthService.changePassword(currentPassword, newPassword);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to change password'
+      };
+    }
   };
 
   const value: AuthContextType = {
     user,
-    loading,
+    loading: !isClient || loading,
     signIn,
     signUp,
     signOut,

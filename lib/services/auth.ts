@@ -23,9 +23,35 @@ import { User, UserPreferences, UserStats, ApiResponse } from "@/lib/types";
 import { sessionManager, userPreferences } from "@/lib/utils/cookies";
 
 export class AuthService {
+  // Helper method to check if we're in a browser environment
+  private static isBrowser() {
+    return typeof window !== 'undefined';
+  }
+
+  // Helper method to safely access Firebase auth
+  private static getAuth() {
+    if (!this.isBrowser()) {
+      return null;
+    }
+    return auth;
+  }
+
+  // Helper method to safely access Firestore
+  private static getDb() {
+    if (!this.isBrowser()) {
+      return null;
+    }
+    return db;
+  }
+
   // Helper method to convert Firebase user to our User type
   private static async getUserData(firebaseUser: FirebaseUser): Promise<User> {
     try {
+      const db = this.getDb();
+      if (!db) {
+        throw new Error('Database not available');
+      }
+
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.uid));
       const userData = userDoc.data();
@@ -116,6 +142,12 @@ export class AuthService {
     telegramUsername?: string
   ): Promise<ApiResponse<User>> {
     try {
+      const auth = this.getAuth();
+      const db = this.getDb();
+      if (!auth || !db) {
+        throw new Error('Authentication not available');
+      }
+
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
 
       // Create the full user profile
@@ -175,6 +207,11 @@ export class AuthService {
   // Sign in existing user
   static async signIn(email: string, password: string): Promise<ApiResponse<User>> {
     try {
+      const auth = this.getAuth();
+      if (!auth) {
+        throw new Error('Authentication not available');
+      }
+
       const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password);
       const user = await this.getUserData(firebaseUser);
 
@@ -210,31 +247,39 @@ export class AuthService {
   // Sign out user
   static async signOut(): Promise<ApiResponse<null>> {
     try {
+      const auth = this.getAuth();
+      if (!auth) {
+        throw new Error('Authentication not available');
+      }
+
       await firebaseSignOut(auth);
       sessionManager.clearUserSession();
       return {
         success: true,
-        message: "Muvaffaqiyatli chiqildi!"
+        message: "Muvaffaqiyatli chiqish!"
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.message
+        error: this.getErrorMessage(error.code) || error.message
       };
     }
   }
 
   // Listen to auth state changes
   static onAuthStateChange(callback: (user: User | null) => void) {
+    const auth = this.getAuth();
+    if (!auth) {
+      callback(null);
+      return () => {};
+    }
+
     return onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
           const user = await this.getUserData(firebaseUser);
-          sessionManager.setUserSession(firebaseUser.uid);
-          sessionManager.setLastActivity();
           callback(user);
         } else {
-          sessionManager.clearUserSession();
           callback(null);
         }
       } catch (error) {
