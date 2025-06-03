@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+    
+    function isValidUserData() {
+      return request.resource.data.keys().hasAll(['email', 'displayName', 'firstName', 'lastName']) &&
+        request.resource.data.email is string &&
+        request.resource.data.displayName is string &&
+        request.resource.data.firstName is string &&
+        request.resource.data.lastName is string;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own user document during registration
+      allow create: if isOwner(userId) && isValidUserData();
+      
+      // Users can update their own data (except certain fields)
+      allow update: if isOwner(userId) || isAdmin() && 
+        !('email' in request.resource.data.diff(resource.data).changedKeys()) &&
+        !('createdAt' in request.resource.data.diff(resource.data).changedKeys());
+      
+      // No deletion of user documents
+      allow delete: if isAdmin();
+    }
+
+    // Courses collection
+    match /courses/{courseId} {
+      // Anyone can read published courses
+      allow read: if true;
+      
+      // Only admins can create, update, or delete courses
+      allow write: if isAdmin();
+    }
+
+    // Lessons collection
+    match /lessons/{lessonId} {
+      // Anyone can read lessons (content access will be controlled by enrollment)
+      allow read: if true;
+      
+      // Only admins can create, update, or delete lessons
+      allow write: if isAdmin();
+    }
+
+    // Enrollments collection
+    match /enrollments/{enrollmentId} {
+      // Users can read their own enrollments
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can create enrollments for themselves
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'courseId']);
+      
+      // Users can update their own enrollment progress
+      allow update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // No deletion of enrollments
+      allow delete: if isAdmin();
+    }
+
+    // Lesson Progress collection
+    match /lessonProgress/{progressId} {
+      // Users can read their own lesson progress
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // Users can create and update their own lesson progress
+      allow create, update: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // No deletion of lesson progress
+      allow delete: if false;
+    }
+
+    // Achievements collection
+    match /achievements/{achievementId} {
+      // Anyone can read achievements
+      allow read: if true;
+      
+      // Only admins can manage achievements
+      allow create, update, delete: if isAdmin();
+    }
+
+    // User Achievements collection
+    match /userAchievements/{userAchievementId} {
+      // Users can read their own achievements
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // System can create user achievements (this would typically be done via Cloud Functions)
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Users can update isNew field to mark achievements as read
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['isNew']);
+      
+      // No deletion of user achievements
+      allow delete: if false;
+    }
+
+    // Learning Sessions collection
+    match /learningSessions/{sessionId} {
+      // Users can read their own learning sessions
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // Users can create their own learning sessions
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // No updates or deletions
+      allow update, delete: if false;
+    }
+
+    // Weekly Activity collection
+    match /weeklyActivity/{activityId} {
+      // Users can read their own weekly activity
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // Users can create and update their own weekly activity
+      allow create, update: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // No deletion of weekly activity
+      allow delete: if false;
+    }
+
+    // Admins collection (for role management)
+    match /admins/{adminId} {
+      // Only admins can read admin list
+      allow read: if isAdmin();
+      
+      // Only existing admins can create new admins
+      allow write: if isAdmin();
+      
+      // No updates or deletions (would need special handling)
+      allow update, delete: if false;
+    }
+
+    // Default deny all other documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 

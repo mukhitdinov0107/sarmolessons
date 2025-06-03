@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "./scripts/dist",
+    "skipLibCheck": true,
+    "target": "es2020"
+  },
+  "include": [
+    "./scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "./app",
+    "./components",
+    "./hooks",
+    "./lib",
+    "./utils",
+    "./public",
+    "./data"
+  ]
+}

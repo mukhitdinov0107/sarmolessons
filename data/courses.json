@@ -1,0 +1,176 @@
+{
+  "courses": [
+    {
+      "id": "ai-internship-bootcamp",
+      "title": "AI Internship Preparation Bootcamp",
+      "description": "A four-week hybrid program that equips final-year computer-science students with practical skills in modern NLP, large language models, and MLOps, culminating in a guaranteed two-month paid internship at partner companies.",
+      "shortDescription": "4-week hands-on AI bootcamp",
+      "instructor": "Dr Sara Thompson",
+      "instructorBio": "PhD in Machine Learning, 8 years industry R&D (Google, DeepMind), author of two papers on efficient LLM fine-tuning.",
+      "instructorImageUrl": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=150&h=150&fit=crop&crop=face",
+      "level": "Intermediate",
+      "category": "Artificial Intelligence",
+      "duration": "4 weeks",
+      "price": 100,
+      "currency": "USD",
+      "language": "en",
+      "imageUrl": "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=400&h=300&fit=crop",
+      "videoPreviewUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "tags": ["AI", "LLM", "NLP", "Internship Prep"],
+      "isPublished": true,
+      "isFeatured": true,
+      "enrollmentCount": 0,
+      "rating": 0,
+      "reviewCount": 0,
+      "certificateAvailable": true,
+      "estimatedHours": 25,
+      "prerequisites": ["Python Basics", "Linear Algebra Fundamentals"],
+      "learningOutcomes": [
+        "Implement and fine-tune transformer models",
+        "Build retrieval-augmented generation (RAG) pipelines",
+        "Apply prompt-engineering patterns for business tasks",
+        "Containerise and deploy an LLM micro-service",
+        "Collaborate with Git, CI/CD, and code reviews"
+      ],
+      "lessons": [
+        {
+          "id": "week-1-foundations",
+          "title": "Modern ML Foundations",
+          "description": "Python & NumPy refresher, automatic differentiation, and the anatomy of a transformer block.",
+          "duration": "6 hours",
+          "order": 1,
+          "isPublished": true,
+          "isFree": true,
+          "videoUrl": "https://www.youtube.com/watch?v=O5xeyoRL95U",
+          "content": "<h2>Week 1 – Foundations</h2><p>This module reviews essential math and coding skills, introduces GPU tooling, and walks through every sub-layer in a transformer encoder.</p>",
+          "attachments": [
+            {
+              "id": "wk1-slides",
+              "name": "Week 1 Slides",
+              "type": "pdf",
+              "url": "/attachments/w1-foundations.pdf",
+              "size": "3 MB",
+              "description": "Deck covering key concepts and formulas."
+            }
+          ],
+          "links": [
+            {
+              "id": "link-wk1-hf",
+              "title": "Hugging Face Docs",
+              "url": "https://huggingface.co/docs",
+              "description": "Official transformer library documentation",
+              "type": "external"
+            }
+          ],
+          "quiz": {
+            "id": "quiz-wk1",
+            "title": "Foundations Quiz",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "Which operation enables backpropagation in PyTorch?",
+                "options": ["torch.no_grad()", "torch.autograd", "torch.jit", "torch.compile"],
+                "correctAnswer": 1,
+                "explanation": "torch.autograd tracks operations and computes gradients automatically."
+              }
+            ]
+          }
+        },
+        {
+          "id": "week-2-nlp-finetuning",
+          "title": "NLP Essentials & Fine-Tuning",
+          "description": "Data preprocessing, embeddings, and fine-tuning DistilBERT on a sentiment dataset.",
+          "duration": "6 hours",
+          "order": 2,
+          "isPublished": true,
+          "isFree": false,
+          "videoUrl": "https://www.youtube.com/watch?v=8u0NTzT05xk",
+          "content": "<h2>Week 2 – NLP & Fine-Tuning</h2><p>Hands-on walkthrough of tokenisation pipelines and Hugging Face Trainer for multi-lingual sentiment analysis.</p>",
+          "attachments": [],
+          "links": [],
+          "quiz": {
+            "id": "quiz-wk2",
+            "title": "NLP Quiz",
+            "questions": [
+              {
+                "id": "q2",
+                "question": "What is the main benefit of using pretrained embeddings?",
+                "options": [
+                  "They reduce GPU memory usage",
+                  "They provide contextual meaning from large corpora",
+                  "They eliminate the need for tokenisation",
+                  "They guarantee higher inference speed"
+                ],
+                "correctAnswer": 1,
+                "explanation": "Pretrained embeddings encode semantic information learned from vast text data."
+              }
+            ]
+          }
+        },
+        {
+          "id": "week-3-generative-ai",
+          "title": "Generative AI for Business",
+          "description": "Prompt engineering patterns, RAG pipeline construction, and safety guardrails.",
+          "duration": "6 hours",
+          "order": 3,
+          "isPublished": true,
+          "isFree": false,
+          "videoUrl": "https://www.youtube.com/watch?v=zXxV6rZ0_jg",
+          "content": "<h2>Week 3 – Generative AI</h2><p>Students build a retrieval-augmented FAQ chatbot and implement basic red-teaming tests.</p>",
+          "attachments": [],
+          "links": [],
+          "quiz": {
+            "id": "quiz-wk3",
+            "title": "Generative AI Quiz",
+            "questions": [
+              {
+                "id": "q3",
+                "question": "Which component injects external knowledge into an LLM in a RAG system?",
+                "options": ["Vector store", "Prompt template", "Decoder block", "Optimizer"],
+                "correctAnswer": 0,
+                "explanation": "The vector store retrieves relevant chunks that are merged with the prompt."
+              }
+            ]
+          }
+        },
+        {
+          "id": "week-4-capstone",
+          "title": "Capstone & MLOps Lite",
+          "description": "FastAPI + LangChain deployment, Docker packaging, monitoring, and interview preparation.",
+          "duration": "7 hours",
+          "order": 4,
+          "isPublished": true,
+          "isFree": false,
+          "videoUrl": "https://www.youtube.com/watch?v=YQ0-IvTDc_8",
+          "content": "<h2>Week 4 – Capstone</h2><p>Teams ship a micro-service that summarises long documents and expose it via REST. Session concludes with demo day and mock technical interviews.</p>",
+          "attachments": [
+            {
+              "id": "wk4-template",
+              "name": "FastAPI Template Repo",
+              "type": "code",
+              "url": "/attachments/fastapi-template.zip",
+              "size": "0.8 MB",
+              "description": "Starter code for the deployment task."
+            }
+          ],
+          "links": [],
+          "quiz": {
+            "id": "quiz-wk4",
+            "title": "MLOps Quiz",
+            "questions": [
+              {
+                "id": "q4",
+                "question": "Which file defines Docker build instructions?",
+                "options": ["requirements.txt", "Dockerfile", "compose.yaml", "Makefile"],
+                "correctAnswer": 1,
+                "explanation": "A Dockerfile contains directives to build an image."
+              }
+            ]
+          }
+        }
+      ],
+      "createdAt": "2025-05-28T00:00:00.000Z",
+      "updatedAt": "2025-05-28T00:00:00.000Z"
+    }
+  ]
+}
