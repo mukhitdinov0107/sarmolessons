@@ -4,6 +4,17 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics';
 
+// Development configuration - DO NOT USE IN PRODUCTION
+const DEV_CONFIG = {
+  apiKey: 'AIzaSyCOE2Fya_KInxjVa9EzphKvMmXSf7n_oX8',
+  authDomain: 'sarmolessons.firebaseapp.com',
+  projectId: 'sarmolessons',
+  storageBucket: 'sarmolessons.firebasestorage.app',
+  messagingSenderId: '906913633920',
+  appId: '1:906913633920:web:198f70874ff15948b87865',
+  measurementId: 'G-6ZGR2TDJ1Q'
+};
+
 // Required environment variables
 const requiredEnvVars = [
   'NEXT_PUBLIC_FIREBASE_API_KEY',
@@ -34,35 +45,24 @@ const debugEnvVars = () => {
   });
 };
 
-// Validate environment variables
-const validateEnvVars = () => {
-  debugEnvVars();
-
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    console.error('Missing required environment variables:', missingVars.join(', '));
-    return false;
+// Get configuration based on environment
+const getFirebaseConfig = () => {
+  // Use environment variables if available
+  if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+    return {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    };
   }
 
-  const emptyVars = requiredEnvVars.filter(varName => process.env[varName] === '');
-  if (emptyVars.length > 0) {
-    console.error('Required environment variables are empty:', emptyVars.join(', '));
-    return false;
-  }
-
-  return true;
-};
-
-// Only initialize Firebase if we're in the browser or if all required env vars are present
-const shouldInitializeFirebase = () => {
-  console.log('Checking Firebase initialization conditions:');
-  console.log('- Is browser environment:', typeof window !== 'undefined');
-  
-  const envVarsValid = validateEnvVars();
-  console.log('- Environment variables valid:', envVarsValid);
-  
-  return envVarsValid;
+  // Fall back to development config if no environment variables
+  console.log('Using development Firebase configuration');
+  return DEV_CONFIG;
 };
 
 let app: FirebaseApp | undefined;
@@ -71,73 +71,50 @@ let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 let analytics: Analytics | undefined;
 
-if (shouldInitializeFirebase()) {
-  const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || undefined,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || undefined,
-    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || undefined,
-  };
+try {
+  const firebaseConfig = getFirebaseConfig();
+  
+  // Check if Firebase is already initialized
+  const existingApps = getApps();
+  console.log('Existing Firebase apps:', existingApps.length);
 
-  try {
-    // Log config for debugging (without sensitive values)
-    console.log('Firebase config structure:', {
-      apiKey: firebaseConfig.apiKey ? 'Set' : 'Not set',
-      authDomain: firebaseConfig.authDomain ? 'Set' : 'Not set',
-      projectId: firebaseConfig.projectId ? 'Set' : 'Not set',
-      storageBucket: firebaseConfig.storageBucket ? 'Set' : 'Not set',
-      messagingSenderId: firebaseConfig.messagingSenderId ? 'Set' : 'Not set',
-      appId: firebaseConfig.appId ? 'Set' : 'Not set',
-      measurementId: firebaseConfig.measurementId ? 'Set' : 'Not set',
+  // Initialize Firebase
+  app = existingApps.length === 0 ? initializeApp(firebaseConfig) : existingApps[0];
+  console.log('Firebase app initialized:', !!app);
+  
+  // Initialize services
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+  console.log('Firebase services initialized:', {
+    auth: !!auth,
+    db: !!db,
+    storage: !!storage
+  });
+
+  // Initialize Analytics only in browser environment
+  if (typeof window !== 'undefined') {
+    isSupported().then(supported => {
+      if (supported) {
+        analytics = getAnalytics(app);
+        console.log('Firebase Analytics initialized:', !!analytics);
+      }
+    }).catch((error) => {
+      console.warn('Firebase Analytics initialization failed:', error);
     });
-
-    // Check if Firebase is already initialized
-    const existingApps = getApps();
-    console.log('Existing Firebase apps:', existingApps.length);
-
-    // Initialize Firebase
-    app = existingApps.length === 0 ? initializeApp(firebaseConfig) : existingApps[0];
-    console.log('Firebase app initialized:', !!app);
-    
-    // Initialize services
-    auth = getAuth(app);
-    db = getFirestore(app);
-    storage = getStorage(app);
-    console.log('Firebase services initialized:', {
-      auth: !!auth,
-      db: !!db,
-      storage: !!storage
-    });
-
-    // Initialize Analytics only in browser environment
-    if (typeof window !== 'undefined') {
-      isSupported().then(supported => {
-        if (supported) {
-          analytics = getAnalytics(app);
-          console.log('Firebase Analytics initialized:', !!analytics);
-        }
-      }).catch((error) => {
-        console.warn('Firebase Analytics initialization failed:', error);
-      });
-    }
-
-    console.log('Firebase initialization completed successfully');
-  } catch (error) {
-    console.error('Firebase initialization error:', error);
-    // Log additional details for debugging
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      });
-    }
   }
-} else {
-  console.warn('Firebase initialization skipped due to invalid configuration');
+
+  console.log('Firebase initialization completed successfully');
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+  // Log additional details for debugging
+  if (error instanceof Error) {
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+  }
 }
 
 export { app, auth, db, storage, analytics }; 
